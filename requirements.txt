@@ -1,0 +1,21 @@
+# Dados
+pandas
+pyarrow
+openpyxl
+xlrd
+requests
+
+# Modelagem e explicabilidade
+scikit-learn
+lightgbm
+shap
+matplotlib
+
+# Serviço e interface
+fastapi
+uvicorn
+pydantic
+streamlit
+
+# Testes
+pytest

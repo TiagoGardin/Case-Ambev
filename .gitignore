@@ -1,0 +1,17 @@
+# Ambiente
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# Dados (microdados são grandes e baixados pelo pipeline)
+data/raw/*
+data/external/*
+data/processed/*
+!data/**/.gitkeep
+
+# Artefatos de modelo e experimentos
+models/*
+!models/.gitkeep
+mlruns/

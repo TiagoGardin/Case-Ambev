@@ -54,4 +54,12 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-_Comandos do pipeline, da API e do app a preencher._
+### Pipeline de dados
+
+```bash
+python -m src.ingestion.download_pof     # baixa e extrai a POF 2017-2018 (~150 MB)
+python -m src.ingestion.pof              # lê os arquivos de largura fixa → data/processed/*.parquet
+python notebooks/01_verificacao_pof.py   # checagens de sanidade e contagem da ocasião
+```
+
+_Comandos de features, modelos, API e app a preencher._

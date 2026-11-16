@@ -73,9 +73,50 @@ Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alim
 1. **Encoding dos nomes no zip:** os nomes com acento falham no `unzip` do macOS. Resolvido extraindo com `zipfile` e normalizando os nomes.
 2. **Script em R do IBGE com larguras erradas:** as últimas colunas do Consumo Alimentar (PESO_FINAL, RENDA_TOTAL, DIA_SEMANA) saem deslocadas. Resolvido usando as posições do dicionário.
 3. **Itens com nome de marca:** Coca-Cola, Fanta, Sukita e Tubaína têm códigos próprios. Uma busca só por "REFRIGERANTE" perde cerca de 190 ocasiões.
-4. **Sem data da entrevista:** só há o mês aproximado (via Aluguel Estimado), sem ano, para cerca de 86% das UCs.
+4. **Sem data da entrevista:** reconstruídos ano e mês via Aluguel Estimado (`V9010 + 1` + `DEFLATOR` para separar os dois julhos), para cerca de 86% das UCs. Ver decisão 1.
 5. **Poucos sábados:** o recordatório cobre o dia anterior à entrevista, e há pouca entrevista no domingo. Usar `PESO_FINAL` nas taxas.
 
-## Dúvidas
-- Julho aparece em 2017 e 2018: como tratar no split temporal?
-- Usar `RENDA_TOTAL / nº de moradores` ou `RENDA_DISP_PC` como proxy de classe?
+## Decisões
+
+### 1. Ano e mês da entrevista e split temporal
+**Problema:** a coleta foi de jul/2017 a jul/2018. `V9010 + 1` dá o mês, mas julho aparece nos dois anos.
+
+**Solução:** os outros meses ocorrem uma única vez (ago–dez → 2017, jan–jun → 2018). Para julho, o `DEFLATOR` do Aluguel Estimado leva valores a preços de 15/01/2018: é > 1 para valores de 2017 (corrige para cima) e < 1 para 2018.
+
+**Evidência:**
+- Em julho, a distribuição do `DEFLATOR` é bimodal, sem nenhum valor entre 0,985 e 1,0.
+- Todas as 1.836 UPAs com entrevista em julho caem num único ano.
+- Os meses vizinhos confirmam o padrão: junho/2018 tem média de 0,983, agosto/2017 tem 1,013.
+
+**Resultado:**
+| Mês | UCs |
+|---|---|
+| Julho/2017 | 2.974 |
+| Julho/2018 | 1.109 (fim da coleta) |
+
+Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
+
+**Split temporal:**
+| Conjunto | Período | `ordem_mes` | Parcela das UCs |
+|---|---|---|---|
+| Treino | jul/2017 a fev/2018 | 0–7 | ~65% |
+| Teste | mar/2018 a jul/2018 | 8–12 | ~35% |
+| Sem mês | — | — | ~14% das pessoas (fica fora do split temporal; usada no split por região) |
+
+### 2. Renda (proxy de classe)
+**Decisão:** renda per capita = `RENDA_TOTAL` da UC ÷ nº de moradores da UC, em faixas de salário mínimo de 2018 (R$ 954).
+
+| Faixa | Renda per capita |
+|---|---|
+| 1 | até ½ SM |
+| 2 | ½ a 1 SM |
+| 3 | 1 a 2 SM |
+| 4 | 2 a 5 SM |
+| 5 | acima de 5 SM |
+
+**Por quê:**
+- `RENDA_DISP_PC` pode ser negativa (por causa das deduções), o que é difícil de interpretar.
+- Faixas de SM são legíveis para o negócio (aproximam "classe social").
+- Faixas também são uma entrada simples para a API, ao contrário de um valor em reais de 2018.
+
+**Limitação:** não é a classificação ABEP (Critério Brasil) usada pelo mercado. É apenas uma aproximação de classe.

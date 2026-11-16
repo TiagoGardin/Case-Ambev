@@ -69,6 +69,7 @@ LAYOUT_ALUGUEL = {
     "NUM_DOM": (17, 2),
     "NUM_UC": (19, 1),
     "V9010": (41, 2),  # = mês anterior à data de abertura da entrevista
+    "DEFLATOR": (45, 12),  # fator que leva valores a preços de 15/01/2018
 }
 
 
@@ -113,20 +114,38 @@ def ler_morador() -> pd.DataFrame:
 
 
 def ler_mes_entrevista() -> pd.DataFrame:
-    """Mês aproximado da entrevista por unidade de consumo (UC).
+    """Ano e mês aproximados da entrevista por unidade de consumo (UC).
 
-    Os microdados públicos não trazem a data da entrevista. No registro de
-    Aluguel Estimado, V9010 é, por definição do dicionário, "o mês anterior à
-    data de abertura da pesquisa". Logo: mês da entrevista = V9010 + 1.
+    Os microdados públicos não trazem a data da entrevista. Reconstruímos assim:
 
-    Limitações (documentar no Data Card):
-      - só existe para UCs com aluguel estimado (~86% das pessoas);
-      - não informa o ano: julho pode ser 2017 ou 2018.
+    1. Mês: no registro de Aluguel Estimado, V9010 é, pelo dicionário, "o mês
+       anterior à data de abertura da pesquisa". Logo, mês = V9010 + 1.
+
+    2. Ano: a coleta foi de jul/2017 a jul/2018, então só julho é ambíguo
+       (aparece nos dois anos). Os outros meses ocorrem uma única vez:
+       ago–dez → 2017, jan–jun → 2018.
+       Para julho, usamos o DEFLATOR, que leva valores a preços de 15/01/2018:
+       valores de 2017 são corrigidos para cima (DEFLATOR > 1) e de 2018 para
+       baixo (DEFLATOR < 1). Nos dados, julho tem distribuição bimodal sem
+       nenhum valor entre 0,985 e 1,0, e todas as UCs de uma mesma UPA caem no
+       mesmo ano, o que confirma a regra.
+
+    Limitação (documentar no Data Card): só existe para UCs com aluguel
+    estimado (~86% das pessoas).
     """
     df = ler_registro("ALUGUEL_ESTIMADO.txt", LAYOUT_ALUGUEL)
     df = df.dropna(subset=["V9010"]).drop_duplicates(subset=CHAVE_UC)
+    df["DEFLATOR"] = df["DEFLATOR"].astype(float)
     df["mes_entrevista"] = df["V9010"].astype(int) % 12 + 1
-    return df[CHAVE_UC + ["mes_entrevista"]]
+
+    eh_2017 = df["mes_entrevista"] >= 8
+    julho_2017 = (df["mes_entrevista"] == 7) & (df["DEFLATOR"] > 1)
+    df["ano_entrevista"] = 2018
+    df.loc[eh_2017 | julho_2017, "ano_entrevista"] = 2017
+
+    # Índice temporal contínuo: 0 = jul/2017 ... 12 = jul/2018
+    df["ordem_mes"] = (df["ano_entrevista"] - 2017) * 12 + df["mes_entrevista"] - 7
+    return df[CHAVE_UC + ["ano_entrevista", "mes_entrevista", "ordem_mes"]]
 
 
 def main() -> None:

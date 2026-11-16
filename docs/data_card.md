@@ -26,7 +26,11 @@ Pessoa × dia de recordatório × período do dia (manhã, almoço, tarde, noite
 | Open-Meteo | Clima mensal | _A preencher_ | UF × mês | UF + mês |
 
 ## 5. Regras de integração
-_A preencher._
+- **Pessoa:** registros da POF ligados pela chave `COD_UPA + NUM_DOM + NUM_UC + COD_INFORMANTE`.
+- **Ano/mês da entrevista:** vêm do registro Aluguel Estimado, por unidade de consumo (`COD_UPA + NUM_DOM + NUM_UC`). Mês = `V9010 + 1`. O ano de julho é separado pelo `DEFLATOR` (> 1 → 2017, < 1 → 2018). Detalhes em [notas_pof.md](notas_pof.md#decisões).
+- **Validação temporal:** treino com entrevistas de jul/2017 a fev/2018, teste de mar/2018 a jul/2018. Pessoas sem mês (~14%) ficam fora do split temporal.
+- **Renda:** `RENDA_TOTAL` da UC ÷ nº de moradores, em 5 faixas de salário mínimo de 2018 (R$ 954).
+- _Fontes externas (Vigitel, Censo, OSM, clima): a preencher._
 
 ## 6. Dicionário de variáveis
 | Variável | Origem | Tipo | Descrição |

@@ -29,7 +29,14 @@ PACOTES = {
 }
 
 # Do pacote de dados, só precisamos destes registros (o zip inteiro tem ~1,3 GB descompactado).
-REGISTROS_NECESSARIOS = {"CONSUMO_ALIMENTAR.txt", "MORADOR.txt", "ALUGUEL_ESTIMADO.txt"}
+REGISTROS_NECESSARIOS = {
+    "CONSUMO_ALIMENTAR.txt",  # target e contexto do consumo
+    "MORADOR.txt",  # perfil da pessoa
+    "ALUGUEL_ESTIMADO.txt",  # mês da entrevista (domicílios próprios ou cedidos)
+    "DESPESA_COLETIVA.txt",  # mês da entrevista (domicílios alugados)
+    "DOMICILIO.txt",  # banheiros, água e pavimentação (classe ABEP)
+    "INVENTARIO.txt",  # bens duráveis (classe ABEP)
+}
 
 RAW_DIR = Path(__file__).resolve().parents[2] / "data" / "raw" / "pof"
 

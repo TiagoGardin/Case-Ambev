@@ -101,3 +101,32 @@ print(resumo(refeicoes, "pessoa × dia × refeição").to_string(index=False))
 ocasioes = refeicoes[refeicoes["pizza"] & refeicoes["refri"]]
 share = ocasioes["guarana"].mean()
 print(f"Guaraná em {share:.1%} das ocasiões pizza + refri (n = {len(ocasioes)})")
+
+# %% [markdown]
+# ## 6. Validação da estimativa do mês da entrevista para inquilinos
+#
+# Inquilinos não têm Aluguel Estimado, então o mês deles vem do último aluguel
+# pago + vizinhos da mesma UPA (ver `src/features/mes_entrevista.py`).
+#
+# Como validar sem saber o mês real dos inquilinos: aplicamos a mesma regra a
+# UCs cujo mês É conhecido e que também têm uma despesa mensal de moradia
+# (prestação ou condomínio, mesmo tipo de pagamento que o aluguel), fingindo
+# não saber o mês delas. A mediana dos vizinhos exclui a própria UC.
+#
+# Também testamos nas poucas UCs que têm Aluguel Estimado E aluguel pago
+# (casos atípicos, ex.: aluguel de outro imóvel), que são um teste mais duro.
+
+# %%
+from src.features.mes_entrevista import validar_regra_pagamento  # noqa: E402
+from src.ingestion.pof import ALUGUEL_PAGO, CONDOMINIO, PRESTACAO_IMOVEL  # noqa: E402
+
+aluguel_estimado = pd.read_parquet(ROOT / "data/processed/pof_aluguel_estimado.parquet")
+pagamentos = pd.read_parquet(ROOT / "data/processed/pof_pagamentos_moradia.parquet")
+
+for nome, codigos in [
+    ("prestação ou condomínio (UCs com mês conhecido)", [PRESTACAO_IMOVEL, CONDOMINIO]),
+    ("aluguel pago (UCs com mês conhecido, casos atípicos)", [ALUGUEL_PAGO]),
+]:
+    print(f"\nValidação com {nome}:")
+    tabela = validar_regra_pagamento(aluguel_estimado, pagamentos, codigos)
+    print(tabela.round(3).to_string(index=False))

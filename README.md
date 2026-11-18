@@ -7,9 +7,10 @@ Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião *
 ## Arquitetura
 
 ```
-fontes (POF, Vigitel, Censo, OSM, Open-Meteo)
-  → src/ingestion      (download e leitura)
-  → src/features       (grade pessoa × dia × período, target, features)
+fontes (POF 2017-2018 do IBGE; Critério Brasil da ABEP)
+  → src/ingestion      (download e leitura dos microdados)
+  → src/features       (mês da entrevista, tipo de área, classe ABEP,
+                        grade pessoa × dia × período com target e features)
   → src/models         (baseline, candidatos, avaliação, SHAP)
   → src/decision_engine(regras documentadas)
   → src/api            (FastAPI)
@@ -32,7 +33,12 @@ fontes (POF, Vigitel, Censo, OSM, Open-Meteo)
 
 ## Dados
 
-Ver [docs/data_card.md](docs/data_card.md).
+- **Fonte do target:** POF 2017–2018 (IBGE), recordatório alimentar de 24h de 46.164 pessoas.
+- **Unidade de análise:** pessoa × dia × período (340.072 linhas, 838 ocasiões de pizza + refrigerante).
+- **Features:** quando (período, dia da semana), onde (UF, tipo de área) e quem (idade, sexo, escolaridade, tamanho da família, classe ABEP).
+- **Validação:** split temporal pelo mês estimado da entrevista (treino jul/2017–fev/2018, teste mar–jul/2018).
+
+Detalhes, decisões e limitações: [docs/data_card.md](docs/data_card.md) e [docs/notas_pof.md](docs/notas_pof.md).
 
 ## Metodologia
 
@@ -59,7 +65,14 @@ uv pip install -r requirements.txt
 ```bash
 python -m src.ingestion.download_pof     # baixa e extrai a POF 2017-2018 (~150 MB)
 python -m src.ingestion.pof              # lê os arquivos de largura fixa → data/processed/*.parquet
-python notebooks/01_verificacao_pof.py   # checagens de sanidade e contagem da ocasião
+python notebooks/01_verificacao_pof.py   # sanidade da leitura, contagem da ocasião, validação do mês
+python -m src.features.build_grid        # grade pessoa × dia × período → data/processed/grid.parquet
 ```
 
-_Comandos de features, modelos, API e app a preencher._
+### Testes
+
+```bash
+python -m pytest
+```
+
+_Comandos de modelos, API e app a preencher._

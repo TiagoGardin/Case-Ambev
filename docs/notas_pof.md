@@ -12,7 +12,7 @@ Download automatizado em `src/ingestion/download_pof.py`.
 | Documentacao_20230713.zip | 13/07/2023 | 16/11/2026 |
 | Programas_de_Leitura_20230713.zip | 13/07/2023 | 16/11/2026 |
 
-Registros usados: `CONSUMO_ALIMENTAR.txt`, `MORADOR.txt`, `ALUGUEL_ESTIMADO.txt`.
+Registros usados: `CONSUMO_ALIMENTAR.txt`, `MORADOR.txt`, `ALUGUEL_ESTIMADO.txt`, `DESPESA_COLETIVA.txt` (quadro 10), `DOMICILIO.txt`, `INVENTARIO.txt`.
 
 ## Variáveis do registro Consumo Alimentar
 Posições copiadas do **dicionário** (`Dicionários de variáveis.xls`, aba Consumo Alimentar).
@@ -41,12 +41,25 @@ Chave de uma linha: pessoa + `QUADRO + SEQ`.
 ### Outros registros
 | Registro | Variável | Posição | Tamanho | Uso |
 |---|---|---|---|---|
+| Morador | ESTRATO_POF | 3 | 4 | Estrato geográfico → tipo de área (decisão 4) |
+| Morador | V0306 | 22 | 2 | Condição na UC (1 = pessoa de referência) |
 | Morador | V0403 | 33 | 3 | Idade |
 | Morador | V0404 | 36 | 1 | Sexo (1 homem, 2 mulher) |
-| Morador | V0405 | 37 | 1 | Cor ou raça |
-| Morador | ANOS_ESTUDO | 76 | 2 | Escolaridade |
+| Morador | V0405 | 37 | 1 | Cor ou raça (lida, não usada) |
+| Morador | ANOS_ESTUDO | 76 | 2 | Anos de estudo (fundamental de 9 anos: completo = 9) |
+| Morador | NIVEL_INSTRUCAO | 116 | 1 | 1 sem instrução … 7 superior completo |
 | Morador | RENDA_DISP_PC | 117 | 20 | Renda disponível per capita (pode ser negativa) |
 | Aluguel Estimado | V9010 | 41 | 2 | Mês anterior à abertura da entrevista → mês da entrevista = V9010 + 1 |
+| Aluguel Estimado | DEFLATOR | 45 | 12 | Leva valores a preços de 15/01/2018 (separa os dois julhos) |
+| Despesa Coletiva | QUADRO | 20 | 2 | 10 = despesas com moradia |
+| Despesa Coletiva | V9001 | 24 | 7 | 1000101 aluguel, 1000301 prestação, 1000501 condomínio |
+| Despesa Coletiva | V9010 | 47 | 2 | Último mês em que a despesa foi paga |
+| Despesa Coletiva | V9011 | 49 | 2 | Nº de meses pagos no período de referência |
+| Domicílio | V0207 | 26 | 1 | Abastecimento de água (1 = rede geral) |
+| Domicílio | V02111 | 34 | 2 | Banheiros de uso exclusivo (com chuveiro e vaso) |
+| Domicílio | V0220 | 49 | 1 | Rua pavimentada (1 sim, 2 não) |
+| Inventário | V9001 | 24 | 7 | Código do bem durável (quadro 14) |
+| Inventário | V9005 | 31 | 2 | Quantidade do bem |
 
 ## Códigos de alimentos
 Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alimentar.xlsx`) **∪ busca por nome no cadastro**, menos exclusões explícitas. Lista completa: `python -m src.ingestion.codigos_alimentos`.
@@ -73,7 +86,7 @@ Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alim
 1. **Encoding dos nomes no zip:** os nomes com acento falham no `unzip` do macOS. Resolvido extraindo com `zipfile` e normalizando os nomes.
 2. **Script em R do IBGE com larguras erradas:** as últimas colunas do Consumo Alimentar (PESO_FINAL, RENDA_TOTAL, DIA_SEMANA) saem deslocadas. Resolvido usando as posições do dicionário.
 3. **Itens com nome de marca:** Coca-Cola, Fanta, Sukita e Tubaína têm códigos próprios. Uma busca só por "REFRIGERANTE" perde cerca de 190 ocasiões.
-4. **Sem data da entrevista:** reconstruídos ano e mês via Aluguel Estimado (`V9010 + 1` + `DEFLATOR` para separar os dois julhos), para cerca de 86% das UCs. Ver decisão 1.
+4. **Sem data da entrevista:** ano e mês reconstruídos via Aluguel Estimado (`V9010 + 1`, com o `DEFLATOR` separando os dois julhos). Inquilinos não têm esse registro e ficavam todos fora do split; o mês deles vem do aluguel pago e dos vizinhos da UPA. Ver decisões 1 e 3.
 5. **Poucos sábados:** o recordatório cobre o dia anterior à entrevista, e há pouca entrevista no domingo. Usar `PESO_FINAL` nas taxas.
 
 ## Decisões
@@ -96,12 +109,12 @@ Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alim
 
 Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
 
-**Split temporal:**
-| Conjunto | Período | `ordem_mes` | Parcela das UCs |
-|---|---|---|---|
-| Treino | jul/2017 a fev/2018 | 0–7 | ~65% |
-| Teste | mar/2018 a jul/2018 | 8–12 | ~35% |
-| Sem mês | — | — | ~14% das pessoas (fica fora do split temporal; usada no split por região) |
+**Split temporal** (já com os inquilinos da decisão 3):
+| Conjunto | Período | `ordem_mes` | Linhas da grade | Positivos |
+|---|---|---|---|---|
+| Treino | jul/2017 a fev/2018 | 0–7 | 223.768 (65,8%) | 523 |
+| Teste | mar/2018 a jul/2018 | 8–12 | 116.296 (34,2%) | 315 |
+| Sem mês | — | — | 8 (1 pessoa) | 0 |
 
 ### 2. Renda (proxy de classe)
 **Decisão:** renda per capita = `RENDA_TOTAL` da UC ÷ nº de moradores da UC, em faixas de salário mínimo de 2018 (R$ 954).
@@ -120,3 +133,47 @@ Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
 - Faixas também são uma entrada simples para a API, ao contrário de um valor em reais de 2018.
 
 **Limitação:** não é a classificação ABEP (Critério Brasil) usada pelo mercado. É apenas uma aproximação de classe.
+
+**Atualização (17/11):** a classe ABEP (decisão 5) virou a feature principal de classe social. A renda fica como alternativa a comparar nos experimentos.
+
+### 3. Mês da entrevista dos inquilinos
+**Problema:** quem mora de aluguel não tem o registro de Aluguel Estimado. Na primeira versão, 99% das pessoas "sem mês" eram inquilinos, e treino e teste tinham **zero** inquilinos (cerca de 16% da população, com taxa da ocasião maior que a média).
+
+**Solução** (`src/features/mes_entrevista.py`), em três níveis:
+1. Com Aluguel Estimado: regra da decisão 1.
+2. Inquilino com aluguel pago: mês = último mês pago (`V9010` do quadro 10) + 1, a mesma lógica do Aluguel Estimado. O ano vem dos vizinhos: UCs da mesma UPA são entrevistadas na mesma época (em geral dentro de 2–3 meses). Se o mês do pagamento ficar a mais de 2 meses da mediana dos vizinhos, usa a mediana.
+3. Sem aluguel pago: mediana dos vizinhos da UPA.
+
+**Validação:** como o mês real dos inquilinos é desconhecido, a regra foi aplicada a UCs com mês conhecido que pagam prestação ou condomínio (mesmo tipo de despesa mensal), fingindo não saber o mês, e sem usar a própria UC na mediana dos vizinhos.
+
+| Teste | Regra | Erro ≤ 1 mês | Mesmo lado do corte treino/teste |
+|---|---|---|---|
+| Prestação ou condomínio (3.943 UCs) | Pagamento + vizinhos | 96,1% | 97,0% |
+| Prestação ou condomínio | Só vizinhos | 81,5% | 86,7% |
+| Aluguel pago, casos atípicos com os dois registros (227 UCs) | Pagamento + vizinhos | 85,5% | 91,6% |
+
+**Resultado:** 2.695 UCs pelo aluguel pago, 451 pelos vizinhos e 1 sem mês.
+
+### 4. Tipo de área
+**Decisão:** `ESTRATO_POF` mapeado pela tabela oficial `Estratos POF 2017-2018.xls` em capital, região metropolitana, interior urbano e rural (`src/features/tipo_area.py`). Substitui `urbano` como feature.
+
+**Por quê:** `urbano` esconde uma diferença grande. Na triagem, a taxa noturna da ocasião foi 1,80% na capital, 1,44% na RM, 1,02% no interior urbano e 0,18% no rural. O "rural" do estrato coincide 100% com a situação do domicílio, então a nova variável só detalha o urbano.
+
+### 5. Classe social pelo Critério Brasil (ABEP)
+**Decisão:** pontos do Critério Brasil (versão de 01/06/2019) calculados por UC (`src/features/classe_abep.py`):
+
+| Componente | Fonte na POF |
+|---|---|
+| Automóvel, microcomputador, lava-louça, geladeira, freezer, lava-roupa, DVD, micro-ondas, moto | Inventário (quadro 14); a geladeira duplex conta também como freezer (regra da ABEP) |
+| Banheiros | Domicílio (`V02111`) |
+| Água encanada, rua pavimentada | Domicílio (`V0207`, `V0220`) |
+| Instrução do chefe | Pessoa de referência (`V0306 = 1`): `NIVEL_INSTRUCAO`, com Fundamental I completo = 5 anos de estudo |
+
+Cortes: DE 0–16, C2 17–22, C1 23–28, B2 29–37, B1 38–44, A 45+.
+
+**Por quê:**
+- Separa a ocasião melhor que a renda: a taxa noturna vai de 0,34% (DE) a 2,57% (B1), uma diferença de 7,6 vezes (nas faixas de renda, 3,3 vezes).
+- É a classificação do mercado e do TAPI ("Classe A").
+- A distribuição ponderada fica próxima da oficial (DE 32,2% contra 28,3%; A 2,1% contra 2,5%).
+
+**Aproximações:** faltam empregados domésticos e secadora; a POF só conta banheiro com chuveiro; não separa automóvel profissional; a pessoa de referência faz o papel de chefe da família.

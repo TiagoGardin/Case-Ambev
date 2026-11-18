@@ -73,7 +73,7 @@ def codigos_pizza() -> set[int]:
 def codigos_refrigerante() -> set[int]:
     """Subgrupos oficiais de refrigerantes + itens do cadastro com nome de refrigerante.
 
-    Mesma lógica da pizza: alguns itens (ex.: Fanta light, Paraguai) estão no
+    Mesma lógica da pizza: alguns itens (ex.: Fanta light, Tubaína light) estão no
     cadastro mas fora dos subgrupos oficiais.
     """
     oficiais = subgrupos_oficiais()
@@ -82,7 +82,7 @@ def codigos_refrigerante() -> set[int]:
     por_nome = set(
         cad.loc[
             cad["descricao"].str.contains(
-                r"REFRIGERANTE|FANTA|COCA COLA|^GUARANA (?:TRADICIONAL|LIGHT|DIET)",
+                r"REFRIGERANTE|FANTA|COCA COLA|TUBAINA|^GUARANA (?:TRADICIONAL|LIGHT|DIET)",
                 na=False,
                 regex=True,
             ),

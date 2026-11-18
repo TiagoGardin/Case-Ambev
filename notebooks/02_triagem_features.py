@@ -10,7 +10,8 @@
 # - **Validação cruzada repetida:** `StratifiedGroupKFold` com 5 folds, agrupada
 #   por domicílio, repetida 10 vezes com partições diferentes (50 folds). As mesmas
 #   partições valem para todas as comparações.
-# - **Métrica:** PR-AUC ponderada por `peso`, em cada fold.
+# - **Métrica:** PR-AUC ponderada por `peso_semana` (PESO_FINAL com cada dia da semana
+#   valendo 1/7), em cada fold.
 # - **Modelos:** LightGBM raso e determinístico, e Regressão Logística simples.
 # - **Regra:** um grupo entra se o ganho de PR-AUC for significativo a 5%
 #   (unilateral) **nos dois modelos**, pelo teste t corrigido para validação
@@ -183,8 +184,8 @@ print("Nulos nas candidatas:", nulos[nulos > 0].to_dict() or "nenhum")
 
 # %%
 def taxa_noite(d: pd.DataFrame, col: str) -> pd.DataFrame:
-    n = d[d["periodo"] == "noite"].assign(yw=lambda x: x["y"] * x["peso"])
-    t = n.groupby(col, observed=True).agg(yw=("yw", "sum"), w=("peso", "sum"),
+    n = d[d["periodo"] == "noite"].assign(yw=lambda x: x["y"] * x["peso_semana"])
+    t = n.groupby(col, observed=True).agg(yw=("yw", "sum"), w=("peso_semana", "sum"),
                                           positivos=("y", "sum"))
     t["taxa noturna (%)"] = (t["yw"] / t["w"] * 100).round(2)
     return t[["taxa noturna (%)", "positivos"]]
@@ -241,7 +242,7 @@ _cache: dict = {}
 
 
 def prauc(cols: list[str], algo: str) -> np.ndarray:
-    """PR-AUC ponderada em cada um dos 50 folds."""
+    """PR-AUC ponderada por `peso_semana` em cada um dos 50 folds."""
     chave = (tuple(sorted(cols)), algo)
     if chave not in _cache:
         prever = prever_lgb if algo == "lgb" else prever_lr
@@ -249,7 +250,7 @@ def prauc(cols: list[str], algo: str) -> np.ndarray:
         for tr, va in FOLDS:
             a, b = df.iloc[tr], df.iloc[va]
             p = prever(a[cols], a["y"], b[cols])
-            r.append(average_precision_score(b["y"], p, sample_weight=b["peso"]))
+            r.append(average_precision_score(b["y"], p, sample_weight=b["peso_semana"]))
         _cache[chave] = np.array(r)
     return _cache[chave]
 

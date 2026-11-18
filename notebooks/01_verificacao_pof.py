@@ -11,6 +11,7 @@
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1] if "__file__" in globals() else Path.cwd().parent
@@ -130,3 +131,23 @@ for nome, codigos in [
     print(f"\nValidação com {nome}:")
     tabela = validar_regra_pagamento(aluguel_estimado, pagamentos, codigos)
     print(tabela.round(3).to_string(index=False))
+
+# %% [markdown]
+# ## 7. Evidência da regra do mês (decisão 1 das notas)
+#
+# No Aluguel Estimado, mês da entrevista = V9010 + 1. Só julho aparece nos dois anos da
+# coleta; o DEFLATOR, que leva valores a preços de 15/01/2018, separa os dois: > 1 em 2017
+# e < 1 em 2018.
+
+# %%
+mes = aluguel_estimado["V9010"] % 12 + 1
+julho = aluguel_estimado[mes == 7]
+print(f"UCs em julho: {len(julho):,} → 2017 (deflator > 1): {(julho['DEFLATOR'] > 1).sum():,}"
+      f" | 2018 (deflator < 1): {(julho['DEFLATOR'] < 1).sum():,}")
+print("Deflatores de julho entre 0,985 e 1,0 (esperado: 0):",
+      int(julho["DEFLATOR"].between(0.985, 1.0, inclusive="neither").sum()))
+anos = julho.assign(ano=np.where(julho["DEFLATOR"] > 1, 2017, 2018)).groupby("COD_UPA")["ano"]
+print(f"UPAs com entrevista em julho: {anos.ngroups:,}; com os dois anos misturados: "
+      f"{int((anos.nunique() > 1).sum())}")
+print(f"Deflator médio: junho {aluguel_estimado.loc[mes == 6, 'DEFLATOR'].mean():.3f} (2018), "
+      f"agosto {aluguel_estimado.loc[mes == 8, 'DEFLATOR'].mean():.3f} (2017)")

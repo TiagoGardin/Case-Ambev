@@ -67,10 +67,12 @@ Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alim
 | Grupo | Nº de códigos | Regra | Observação |
 |---|---|---|---|
 | Pizza | 19 | Subgrupo "Pizzas" ∪ nome contém "PIZZA" | Inclui calzone e pizza doce |
-| Refrigerante | 33 | Subgrupos "Refrigerantes" e "Refrigerantes diet/light" ∪ nomes de refrigerante/marca | Excluídos: refresco de guaraná natural, água gaseificada com sumo, mate, ice tea, Tampico |
+| Refrigerante | 34 | Subgrupos "Refrigerantes" e "Refrigerantes diet/light" ∪ nomes de refrigerante/marca | Inclui água tônica. Excluídos: refresco de guaraná natural, água gaseificada com sumo, mate, ice tea, Tampico |
 | Guaraná | 6 | Refrigerantes com "GUARANA" no nome | Tradicional, light e diet. **Não identifica marca** |
 
 ## Resultados da verificação (`notebooks/01_verificacao_pof.py`)
+Contagem por refeição, antes da grade. As taxas usam só o `PESO_FINAL`, sem o ajuste por dia da semana da armadilha 5.
+
 | Medida | Valor |
 |---|---|
 | Linhas do Consumo Alimentar | 1.175.390 |
@@ -87,7 +89,7 @@ Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alim
 2. **Script em R do IBGE com larguras erradas:** as últimas colunas do Consumo Alimentar (PESO_FINAL, RENDA_TOTAL, DIA_SEMANA) saem deslocadas. Resolvido usando as posições do dicionário.
 3. **Itens com nome de marca:** Coca-Cola, Fanta, Sukita e Tubaína têm códigos próprios. Uma busca só por "REFRIGERANTE" perde cerca de 190 ocasiões.
 4. **Sem data da entrevista:** ano e mês reconstruídos via Aluguel Estimado (`V9010 + 1`, com o `DEFLATOR` separando os dois julhos). Inquilinos não têm esse registro e ficavam todos fora do split; o mês deles vem do aluguel pago e dos vizinhos da UPA. Ver decisões 1 e 3.
-5. **Poucos sábados:** o recordatório cobre o dia anterior à entrevista, e há pouca entrevista no domingo. Usar `PESO_FINAL` nas taxas.
+5. **Poucas sextas e sábados:** o recordatório cobre o dia anterior à entrevista, e há poucas entrevistas no sábado e no domingo, então sextas e sábados são só 9% e 5% dos dias. O `PESO_FINAL` expande pessoas e não corrige isso. Taxas que somam a semana usam `peso_semana` (`src/features/build_grid.py`), que dá 1/7 a cada dia.
 
 ## Decisões
 
@@ -96,7 +98,7 @@ Regra: **subgrupo oficial do IBGE** (`Classificação dos grupos de Consumo Alim
 
 **Solução:** os outros meses ocorrem uma única vez (ago–dez → 2017, jan–jun → 2018). Para julho, o `DEFLATOR` do Aluguel Estimado leva valores a preços de 15/01/2018: é > 1 para valores de 2017 (corrige para cima) e < 1 para 2018.
 
-**Evidência:**
+**Evidência** (`notebooks/01_verificacao_pof.py`, seção 7):
 - Em julho, a distribuição do `DEFLATOR` é bimodal, sem nenhum valor entre 0,985 e 1,0.
 - Todas as 1.836 UPAs com entrevista em julho caem num único ano.
 - Os meses vizinhos confirmam o padrão: junho/2018 tem média de 0,983, agosto/2017 tem 1,013.
@@ -160,8 +162,8 @@ O lado do corte é decidido por domicílio (`split_temporal` em `src/features/bu
 **Decisão:** `ESTRATO_POF` mapeado pela tabela oficial `Estratos POF 2017-2018.xls` em capital, região metropolitana, interior urbano e rural (`src/features/tipo_area.py`). Fica na base para os segmentos; no modelo, continua `urbano`.
 
 **Por quê:**
-- A diferença descritiva é grande: no treino, a taxa noturna da ocasião foi 1,74% na capital, 1,16% na RM, 0,97% no interior urbano e 0,19% no rural.
-- Mesmo assim, trocar `urbano` por `tipo_area` não trouxe ganho na triagem com validação cruzada no treino: PR-AUC −0,0024 no LightGBM e −0,0036 na Regressão Logística, sem significância (`notebooks/02_triagem_features.py`). Provavelmente `urbano` e `UF` já carregam quase toda essa diferença.
+- A diferença descritiva é grande: no treino, a taxa noturna da ocasião foi 1,71% na capital, 1,50% na RM, 1,00% no interior urbano e 0,23% no rural (ponderada por `peso_semana`).
+- Mesmo assim, trocar `urbano` por `tipo_area` não trouxe ganho na triagem com validação cruzada no treino: PR-AUC −0,0027 no LightGBM e −0,0029 na Regressão Logística, sem significância (`notebooks/02_triagem_features.py`). Provavelmente `urbano` e `UF` já carregam quase toda essa diferença.
 - O "rural" do estrato coincide 100% com a situação do domicílio, então `tipo_area` só detalha o urbano.
 
 ### 5. Classe social pelo Critério Brasil (ABEP)
@@ -180,8 +182,8 @@ Cortes: DE 0–16, C2 17–22, C1 23–28, B2 29–37, B1 38–44, A 45+.
 
 **Por quê:**
 - É a classificação do mercado e do TAPI ("Classe A"), então é a variável de público nos segmentos e nas regras.
-- Na descrição, separa a ocasião mais que a renda: no treino, a taxa noturna vai de 0,41% (DE) a 3,15% (B1), 7,7 vezes (nas faixas de renda, 2,9 vezes).
-- No modelo, somar a classe às 9 features não trouxe ganho na triagem com validação cruzada no treino: PR-AUC +0,0004 no LightGBM e −0,0014 na Regressão Logística, sem significância. Provavelmente renda e escolaridade já carregam quase toda essa informação.
+- Na descrição, separa a ocasião mais que a renda: no treino, a taxa noturna vai de 0,34% (DE) a 4,40% (B1), 12,9 vezes (nas faixas de renda, 4,4 vezes).
+- No modelo, somar a classe às 9 features não trouxe ganho na triagem com validação cruzada no treino: PR-AUC +0,0005 no LightGBM e +0,0014 na Regressão Logística, sem significância. Provavelmente renda e escolaridade já carregam quase toda essa informação.
 - A distribuição ponderada fica próxima da oficial (DE 32,2% contra 28,3%; A 2,1% contra 2,5%).
 
 **Aproximações:** faltam empregados domésticos e secadora; a POF só conta banheiro com chuveiro; não separa automóvel profissional; a pessoa de referência faz o papel de chefe da família.

@@ -196,6 +196,22 @@ def split_temporal(ucs: pd.DataFrame) -> pd.Series:
     return pd.Series(split, index=ucs.index)
 
 
+def peso_semana(grid: pd.DataFrame) -> pd.Series:
+    """PESO_FINAL ajustado para que cada dia da semana tenha 1/7 do peso, dentro de cada split.
+
+    O PESO_FINAL expande pessoas, não dias. Como o recordatório é do dia anterior à
+    entrevista e há poucas entrevistas no fim de semana, sextas e sábados ficam bem
+    abaixo de 1/7 dos dias da amostra (cerca de 9% e 5%). Taxas e métricas que somam
+    a semana usam este peso; a taxa de um dia só não muda, porque o fator é o mesmo
+    dentro do dia. Usa só a distribuição dos dias de recordatório, não o target.
+    """
+    pdias = grid.drop_duplicates(subset=CHAVE_PESSOA + ["QUADRO"])
+    soma = pdias.groupby(["split", "dia_semana"], observed=True)["peso"].sum()
+    fator = (1 / 7) / (soma / soma.groupby(level="split").transform("sum"))
+    chave = pd.MultiIndex.from_frame(grid[["split", "dia_semana"]].astype(str))
+    return pd.Series(grid["peso"].to_numpy() * fator.reindex(chave).to_numpy(), index=grid.index)
+
+
 def montar_grid() -> pd.DataFrame:
     consumo = pd.read_parquet(PROC / "pof_consumo.parquet")
     morador = pd.read_parquet(PROC / "pof_morador.parquet")
@@ -243,6 +259,9 @@ def montar_grid() -> pd.DataFrame:
     ucs = ucs.assign(split=split_temporal(ucs))
     grid = grid.merge(ucs[CHAVE_UC + ["split"]], on=CHAVE_UC, how="left")
 
+    # 7) Peso por pessoa-dia: cada dia da semana com 1/7 do peso, em cada split
+    grid["peso_semana"] = peso_semana(grid)
+
     # Categorias ordenadas (ajuda em gráficos e no one-hot)
     grid["periodo"] = pd.Categorical(grid["periodo"], PERIODOS, ordered=True)
     grid["dia_semana"] = pd.Categorical(grid["dia_semana"], DIAS, ordered=True)
@@ -250,7 +269,7 @@ def montar_grid() -> pd.DataFrame:
     grid["local_pizza"] = pd.Categorical(grid["local_pizza"], LOCAIS)
 
     colunas = (
-        CHAVE_PESSOA + ["QUADRO", "peso", "split"]
+        CHAVE_PESSOA + ["QUADRO", "peso", "peso_semana", "split"]
         # tempo da entrevista (split e análise; NÃO é feature)
         + ["ano_entrevista", "mes_entrevista", "ordem_mes", "fonte_mes", "estacao"]
         # features do modelo (triagem: notebooks/02_triagem_features.py)
@@ -274,13 +293,35 @@ def validar(grid: pd.DataFrame, n_pessoa_dias: int) -> None:
     assert grid.loc[~grid["pizza"], "local_pizza"].isna().all(), "local_pizza sem pizza no período"
     lados = grid.groupby(CHAVE_DOM)["split"].nunique()
     assert (lados == 1).all(), "domicílio nos dois lados do split"
+    pdias = grid.drop_duplicates(subset=CHAVE_PESSOA + ["QUADRO"])
+    for s in ["treino", "teste"]:
+        d = pdias[pdias["split"] == s]
+        soma = d.groupby("dia_semana", observed=True)["peso_semana"].sum()
+        fatias = soma / soma.sum()
+        assert len(fatias) == 7 and np.allclose(fatias, 1 / 7), f"peso_semana desigual ({s})"
 
 
 def _resumo(grid: pd.DataFrame) -> None:
+    """Imprime os números citados no Data Card (seções 1, 2, 5 e 7)."""
     ucs = grid.drop_duplicates(subset=CHAVE_UC)
+    dias = grid.drop_duplicates(subset=CHAVE_PESSOA + ["QUADRO"]).groupby(CHAVE_PESSOA).size()
+    pos = grid[grid["y"] == 1]
+    def taxa(d: pd.DataFrame, peso: str) -> float:
+        return (d["y"] * d[peso]).sum() / d[peso].sum() * 100
+
+    n_dom = grid[CHAVE_DOM].drop_duplicates().shape[0]
+    print(f"\nCobertura: {dias.size:,} pessoas em {n_dom:,} domicílios; "
+          f"{(dias == 2).sum():,} com 2 dias de recordatório e {(dias == 1).sum():,} com 1")
+    print(f"Target: {len(pos):,} positivos, em {pos[CHAVE_PESSOA].drop_duplicates().shape[0]:,} "
+          f"pessoas de {pos[CHAVE_DOM].drop_duplicates().shape[0]:,} domicílios")
+    for s, d in [("base inteira", grid)] + [(s, grid[grid["split"] == s])
+                                            for s in ["treino", "teste"]]:
+        print(f"  taxa ({s}): {taxa(d, 'peso_semana'):.3f}% com peso_semana "
+              f"({taxa(d, 'peso'):.3f}% só com PESO_FINAL)")
 
     print("\nPor split:")
-    print(grid.groupby("split").agg(linhas=("y", "size"), positivos=("y", "sum")).to_string())
+    print(grid.groupby("split").agg(linhas=("y", "size"), positivos=("y", "sum"),
+                                    pizza_guarana=("y_guarana", "sum")).to_string())
 
     print("\nOrigem do mês da entrevista (UCs):")
     print(ucs["fonte_mes"].value_counts(dropna=False).to_string())

@@ -16,6 +16,7 @@ from src.features.build_grid import (
     local_da_pizza,
     local_refeicao,
     periodo_do_dia,
+    peso_semana,
     split_temporal,
 )
 from src.features.classe_abep import (
@@ -217,6 +218,28 @@ def test_split_temporal_por_domicilio():
     })
     esperado = ["teste", "teste", "treino", "treino", "treino", "sem_mes"]
     assert split_temporal(ucs).tolist() == esperado
+
+
+def test_peso_semana_iguala_os_dias_dentro_do_split():
+    """Treino com 3 pessoa-dias de segunda e 1 de sábado, todos com peso 1: depois do ajuste,
+    os dois dias somam o mesmo peso. O teste, com um dia só, não é afetado pelo treino.
+    Cada pessoa-dia tem 2 linhas (períodos), e o fator é o mesmo nas duas."""
+    pessoas = [("1", "segunda"), ("2", "segunda"), ("3", "segunda"), ("4", "sabado"),
+               ("5", "domingo")]
+    linhas = []
+    for informante, dia in pessoas:
+        split = "teste" if dia == "domingo" else "treino"
+        for periodo in ["almoco", "noite"]:
+            linhas.append({**dict.fromkeys(CHAVE_PESSOA, "1"), "COD_INFORMANTE": informante,
+                           "QUADRO": "72", "periodo": periodo, "split": split,
+                           "dia_semana": dia, "peso": 1.0})
+    grid = pd.DataFrame(linhas)
+    grid["peso_semana"] = peso_semana(grid)
+
+    por_dia = grid.groupby(["split", "dia_semana"])["peso_semana"].sum()
+    assert por_dia[("treino", "segunda")] == pytest.approx(por_dia[("treino", "sabado")])
+    assert grid.loc[grid["dia_semana"] == "segunda", "peso_semana"].nunique() == 1
+    assert por_dia[("teste", "domingo")] == pytest.approx(2 / 7)  # 1 pessoa-dia, fatia 1 → 1/7
 
 
 @pytest.mark.parametrize("v9010", [6, math.nan])

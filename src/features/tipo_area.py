@@ -7,9 +7,10 @@ cada código de ESTRATO_POF, por UF:
     URBANO: Município da Capital | Resto da RM | Resto da UF      RURAL
     ex. Pará:   1501 a 1503      | 1504 e 1505 | 1506 a 1511 | 1512 a 1519
 
-Por que usar no lugar de "urbano/rural": a diferença dentro do urbano é grande.
-Na análise exploratória, a taxa noturna de pizza + refri foi 1,80% na capital,
-1,44% na região metropolitana, 1,02% no interior urbano e 0,18% no rural.
+Uso: segmentos da avaliação e Decision Engine. No treino, a taxa noturna de
+pizza + refri vai de 0,23% no rural a 1,71% na capital, mas a triagem com
+validação cruzada (notebooks/02_triagem_features.py) não mostrou ganho de
+trocar `urbano` por esta variável no modelo.
 
 Só usamos o nível geográfico do estrato. A POF também estratifica por renda
 dentro de cada área, mas essa parte não entra aqui.

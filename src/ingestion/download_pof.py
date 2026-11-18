@@ -4,7 +4,9 @@ Uso:
     python -m src.ingestion.download_pof
 
 Baixa os três pacotes do FTP do IBGE para data/raw/pof/ e extrai os arquivos.
-Se um arquivo já existir, não baixa de novo (idempotente).
+Se um arquivo já existir, não baixa de novo (idempotente). Downloads e extrações
+são gravados com o sufixo .parcial e só ganham o nome final quando terminam:
+assim, uma interrupção não deixa um arquivo pela metade que seria pulado depois.
 """
 
 from __future__ import annotations
@@ -56,11 +58,13 @@ def baixar(nome_arquivo: str, destino: Path) -> Path:
         print(f"[ok] {nome_arquivo} já existe, pulando download")
         return caminho
     print(f"[..] baixando {nome_arquivo}")
+    parcial = caminho.with_name(caminho.name + ".parcial")
     with requests.get(BASE_URL + nome_arquivo, stream=True, timeout=60) as r:
         r.raise_for_status()
-        with open(caminho, "wb") as f:
+        with open(parcial, "wb") as f:
             for bloco in r.iter_content(chunk_size=1 << 20):
                 f.write(bloco)
+    parcial.replace(caminho)
     return caminho
 
 
@@ -76,8 +80,10 @@ def extrair(zip_path: Path, destino: Path, apenas: set[str] | None = None) -> No
             if alvo.exists():
                 continue
             alvo.parent.mkdir(parents=True, exist_ok=True)
-            alvo.write_bytes(z.read(info))
-            print(f"     extraído: {alvo.relative_to(RAW_DIR)}")
+            parcial = alvo.with_name(alvo.name + ".parcial")
+            parcial.write_bytes(z.read(info))
+            parcial.replace(alvo)
+            print(f"     extraído: {alvo.relative_to(destino)}")
 
 
 def main() -> None:

@@ -11,7 +11,13 @@ import math
 import pandas as pd
 import pytest
 
-from src.features.build_grid import faixa_renda, periodo_do_dia
+from src.features.build_grid import (
+    faixa_renda,
+    local_da_pizza,
+    local_refeicao,
+    periodo_do_dia,
+    split_temporal,
+)
 from src.features.classe_abep import (
     COD_AUTOMOVEL,
     COD_DVD,
@@ -30,6 +36,7 @@ from src.features.mes_entrevista import (
     ordem_por_pagamento,
 )
 from src.features.tipo_area import AREAS, ARQ_ESTRATOS, expandir_celula, mapa_estratos
+from src.ingestion.pof import CHAVE_PESSOA
 
 
 # --------------------------------------------------------------------------
@@ -47,6 +54,45 @@ def test_faixa_renda_limites():
     renda = pd.Series([0, 0.49 * sm, 0.5 * sm, 1 * sm, 2 * sm, 5 * sm])
     esperado = ["ate_0.5sm", "ate_0.5sm", "0.5_1sm", "1_2sm", "2_5sm", "acima_5sm"]
     assert faixa_renda(renda).astype(str).tolist() == esperado
+
+
+# --------------------------------------------------------------------------
+# Local da pizza (só análise)
+# --------------------------------------------------------------------------
+def test_local_refeicao_agrupa_codigos():
+    r = local_refeicao(pd.Series(["1", "2", "3", "4", "5", "6", "7", "9"]))
+    assert r.iloc[:7].tolist() == ["casa", "outro_fora", "estabelecimento", "estabelecimento",
+                                   "estabelecimento", "outro_fora", "outro_fora"]
+    assert pd.isna(r.iloc[7])  # 9 = não declarado
+
+
+def test_local_da_pizza_vale_a_primeira_do_periodo():
+    """Dia 72, noite: pizza às 22h no restaurante e à 1h em casa → 22h (a madrugada vem depois).
+    Dia 72, almoço: a primeira pizza não tem local declarado → vale a seguinte.
+    Dia 73, noite: duas pizzas às 20h → vale a de SEQ 9, que vem antes de 10 como número.
+    Dia 72, tarde: só refrigerante → fica de fora."""
+    pessoa = dict.fromkeys(CHAVE_PESSOA, "1")
+    linhas = [  # QUADRO, periodo, pizza, hora, SEQ, V9018
+        ("72", "noite", True, 1, "1", "1"),
+        ("72", "noite", True, 22, "8", "5"),
+        ("72", "almoco", True, 12, "2", "9"),
+        ("72", "almoco", True, 13, "3", "7"),
+        ("72", "tarde", False, 16, "4", "1"),
+        ("73", "noite", True, 20, "10", "1"),
+        ("73", "noite", True, 20, "9", "4"),
+    ]
+    itens = pd.DataFrame([
+        {**pessoa, "QUADRO": q, "periodo": p, "pizza": pz, "hora": h, "SEQ": s, "V9018": v}
+        for q, p, pz, h, s, v in linhas
+    ])
+
+    r = local_da_pizza(itens).set_index(["QUADRO", "periodo"])["local_pizza"].to_dict()
+
+    assert r == {
+        ("72", "noite"): "estabelecimento",
+        ("72", "almoco"): "outro_fora",
+        ("73", "noite"): "estabelecimento",
+    }
 
 
 # --------------------------------------------------------------------------
@@ -155,6 +201,22 @@ def test_julho_separado_pelo_deflator():
 ])
 def test_ordem_por_pagamento(v9010, mediana, esperado):
     assert ordem_por_pagamento(v9010, mediana) == esperado
+
+
+def test_split_temporal_por_domicilio():
+    """Dom. 1: UC com aluguel estimado em mar/2018 (ordem 8) e UC pelos vizinhos em jan (6)
+    → as duas no teste. Dom. 2: UC única em fev/2018 (7) → treino. Dom. 3: duas UCs com a
+    mesma fonte, fev e mar → vale o mês mais cedo, treino. Dom. 4: sem mês → sem_mes."""
+    ucs = pd.DataFrame({
+        "COD_UPA": ["1"] * 6,
+        "NUM_DOM": ["1", "1", "2", "3", "3", "4"],
+        "NUM_UC": ["1", "2", "1", "1", "2", "1"],
+        "ordem_mes": [8, 6, 7, 7, 8, math.nan],
+        "fonte_mes": ["aluguel_estimado", "vizinhos_upa", "aluguel_pago",
+                      "aluguel_estimado", "aluguel_estimado", None],
+    })
+    esperado = ["teste", "teste", "treino", "treino", "treino", "sem_mes"]
+    assert split_temporal(ucs).tolist() == esperado
 
 
 @pytest.mark.parametrize("v9010", [6, math.nan])

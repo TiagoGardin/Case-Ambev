@@ -13,10 +13,15 @@ Cada dia é dividido em 4 períodos. Para cada (pessoa, dia, período):
     y = 1 se comeu pizza E tomou refrigerante naquele período.
 
 Instante de previsão: início do dia. As features do modelo são conhecidas
-antes de a pessoa comer: quando (período, dia da semana), onde (UF, tipo de
-área) e quem (idade, sexo, escolaridade, tamanho da família, classe ABEP).
+antes de a pessoa comer: quando (período, dia da semana), onde (UF, urbano ou
+rural) e quem (idade, sexo, escolaridade, tamanho da família, renda per capita).
+Tipo de área e classe ABEP ficam na base para segmentos e para o Decision
+Engine: na triagem com validação cruzada no treino
+(notebooks/02_triagem_features.py), elas não trouxeram ganho ao modelo.
 Variáveis observadas junto com o consumo ou depois dele (local e tipo da
 refeição, outros alimentos, dia atípico) ficam de fora para não vazar o target.
+O local da pizza fica na base só como coluna de análise (`local_pizza`), para
+medir o desempenho por canal e alimentar o Decision Engine.
 A lista completa, com o papel de cada coluna, está no Data Card (seções 3 e 6).
 """
 
@@ -31,7 +36,7 @@ from src.features.classe_abep import CLASSES, DISTRIBUICAO_OFICIAL_PCT, calcular
 from src.features.mes_entrevista import ULTIMO_MES_TREINO, estimar_mes_entrevista
 from src.features.tipo_area import tipo_area
 from src.ingestion.codigos_alimentos import codigos_guarana, codigos_pizza, codigos_refrigerante
-from src.ingestion.pof import CHAVE_PESSOA, CHAVE_UC
+from src.ingestion.pof import CHAVE_DOM, CHAVE_PESSOA, CHAVE_UC
 
 ROOT = Path(__file__).resolve().parents[2]
 PROC = ROOT / "data" / "processed"
@@ -44,6 +49,21 @@ DIAS = ["Segunda-Feira", "Terca-Feira", "Quarta-Feira", "Quinta-Feira",
 FAIXAS_RENDA = ["ate_0.5sm", "0.5_1sm", "1_2sm", "2_5sm", "acima_5sm"]
 FAIXAS_IDADE = ["10_17", "18_29", "30_44", "45_59", "60_mais"]
 REGIOES = {"1": "Norte", "2": "Nordeste", "3": "Sudeste", "4": "Sul", "5": "Centro-Oeste"}
+
+# Origem do mês da entrevista, da mais para a menos confiável (Data Card, seção 5)
+FONTES_MES = ["aluguel_estimado", "aluguel_pago", "vizinhos_upa"]
+
+# Local da refeição (V9018) agrupado; 9 (não declarado) fica nulo
+LOCAIS = ["casa", "estabelecimento", "outro_fora"]
+LOCAL_V9018 = {
+    "1": "casa",             # em casa (inclui delivery: a POF não separa)
+    "3": "estabelecimento",  # restaurante a quilo
+    "4": "estabelecimento",  # lanchonete / fast food
+    "5": "estabelecimento",  # restaurante
+    "2": "outro_fora",       # merenda
+    "6": "outro_fora",       # ambulante
+    "7": "outro_fora",       # outros lugares fora de casa
+}
 
 
 # --------------------------------------------------------------------------
@@ -99,16 +119,42 @@ def base_pessoa_dia(consumo: pd.DataFrame) -> pd.DataFrame:
 
 
 def ocasioes_por_periodo(consumo: pd.DataFrame) -> pd.DataFrame:
-    """Marca, para cada pessoa × dia × período, se houve pizza, refri e guaraná."""
-    df = consumo.assign(
+    """Marca, para cada pessoa × dia × período, se houve pizza, refri e guaraná,
+    e onde a pizza foi comida (só análise)."""
+    chave = CHAVE_PESSOA + ["QUADRO", "periodo"]
+    itens = consumo.assign(
         periodo=periodo_do_dia(consumo["hora"]),
         pizza=consumo["V9001"].isin(codigos_pizza()),
         refri=consumo["V9001"].isin(codigos_refrigerante()),
         guarana=consumo["V9001"].isin(codigos_guarana()),
     )
-    return df.groupby(CHAVE_PESSOA + ["QUADRO", "periodo"], as_index=False)[
-        ["pizza", "refri", "guarana"]
-    ].max()
+    oc = itens.groupby(chave, as_index=False)[["pizza", "refri", "guarana"]].max()
+    return oc.merge(local_da_pizza(itens), on=chave, how="left")
+
+
+def local_refeicao(v9018: pd.Series) -> pd.Series:
+    """Agrupa o local da refeição (V9018) em casa, estabelecimento e outro lugar fora."""
+    return v9018.map(LOCAL_V9018)
+
+
+def local_da_pizza(itens: pd.DataFrame) -> pd.DataFrame:
+    """Onde a pizza foi comida, para cada pessoa × dia × período com pizza.
+
+    Recebe os itens consumidos já marcados com `periodo` e `pizza`. Com mais de
+    uma pizza no período, vale a primeira em ordem de horário que tenha local
+    declarado. Na POF, só 1 dos 1.716 períodos com pizza tem locais diferentes.
+
+    Só para análise: o local é observado junto com o consumo e vazaria o target
+    se fosse feature.
+    """
+    chave = CHAVE_PESSOA + ["QUADRO", "periodo"]
+    pz = itens.loc[itens["pizza"], chave + ["hora", "SEQ", "V9018"]].copy()
+    pz["local_pizza"] = local_refeicao(pz["V9018"])
+    # A madrugada (0–4h) vem depois da noite; SEQ é texto ("10" < "2"), então vira número
+    pz["instante"] = pz["hora"].where(pz["hora"] >= 5, pz["hora"] + 24)
+    pz["ordem"] = pd.to_numeric(pz["SEQ"])
+    pz = pz.sort_values(["instante", "ordem"])
+    return pz.groupby(chave, as_index=False)["local_pizza"].first()
 
 
 def perfil_pessoa(morador: pd.DataFrame) -> pd.DataFrame:
@@ -129,6 +175,25 @@ def perfil_uc(morador: pd.DataFrame, domicilio: pd.DataFrame, inventario: pd.Dat
     ucs = ucs.merge(calcular_classe_abep(morador, domicilio, inventario), on=CHAVE_UC, how="left")
     meses = estimar_mes_entrevista(ucs, aluguel_estimado, pagamentos)
     return ucs.drop(columns="ESTRATO_POF").merge(meses, on=CHAVE_UC, how="left")
+
+
+def split_temporal(ucs: pd.DataFrame) -> pd.Series:
+    """Treino, teste ou sem_mes para cada UC, decidido por domicílio.
+
+    As UCs de um domicílio são entrevistadas na mesma visita e a família divide
+    a pizza, então ficam sempre do mesmo lado do corte. Vale o mês da UC com a
+    fonte mais confiável; em empate, o mês mais cedo (início da visita).
+    """
+    rank = ucs["fonte_mes"].map({f: i for i, f in enumerate(FONTES_MES)})
+    ref = (ucs.assign(_rank=rank)
+              .dropna(subset=["ordem_mes"])
+              .sort_values(["_rank", "ordem_mes"])
+              .drop_duplicates(subset=CHAVE_DOM)[CHAVE_DOM + ["ordem_mes"]]
+              .rename(columns={"ordem_mes": "ordem_split"}))
+    ordem = ucs[CHAVE_DOM].merge(ref, on=CHAVE_DOM, how="left")["ordem_split"].to_numpy()
+    split = np.select([np.isnan(ordem), ordem <= ULTIMO_MES_TREINO], ["sem_mes", "treino"],
+                      default="teste")
+    return pd.Series(split, index=ucs.index)
 
 
 def montar_grid() -> pd.DataFrame:
@@ -173,30 +238,29 @@ def montar_grid() -> pd.DataFrame:
     grid["dia_atipico"] = (grid["dia_atipico"] == "1").astype(int)
     grid["estacao"] = estacao(grid["mes_entrevista"])
 
-    # 6) Split temporal (pelo mês estimado da entrevista)
-    grid["split"] = np.select(
-        [grid["ordem_mes"].isna(), grid["ordem_mes"] <= ULTIMO_MES_TREINO],
-        ["sem_mes", "treino"],
-        default="teste",
-    )
+    # 6) Split temporal pelo mês estimado da entrevista, decidido por domicílio
+    ucs = grid.drop_duplicates(subset=CHAVE_UC)[CHAVE_UC + ["ordem_mes", "fonte_mes"]]
+    ucs = ucs.assign(split=split_temporal(ucs))
+    grid = grid.merge(ucs[CHAVE_UC + ["split"]], on=CHAVE_UC, how="left")
 
     # Categorias ordenadas (ajuda em gráficos e no one-hot)
     grid["periodo"] = pd.Categorical(grid["periodo"], PERIODOS, ordered=True)
     grid["dia_semana"] = pd.Categorical(grid["dia_semana"], DIAS, ordered=True)
     grid["classe_abep"] = pd.Categorical(grid["classe_abep"], CLASSES, ordered=True)
+    grid["local_pizza"] = pd.Categorical(grid["local_pizza"], LOCAIS)
 
     colunas = (
         CHAVE_PESSOA + ["QUADRO", "peso", "split"]
         # tempo da entrevista (split e análise; NÃO é feature)
         + ["ano_entrevista", "mes_entrevista", "ordem_mes", "fonte_mes", "estacao"]
-        # features do modelo
-        + ["periodo", "dia_semana", "UF", "regiao", "tipo_area",
-           "idade", "faixa_idade", "sexo", "anos_estudo", "n_moradores",
-           "abep_pontos", "classe_abep"]
-        # alternativas e análise (ver Data Card, seção 3)
-        + ["renda_pc", "faixa_renda", "urbano", "fim_de_semana", "dia_atipico"]
+        # features do modelo (triagem: notebooks/02_triagem_features.py)
+        + ["periodo", "dia_semana", "UF", "regiao", "urbano",
+           "idade", "faixa_idade", "sexo", "anos_estudo", "n_moradores", "renda_pc"]
+        # alternativas, segmentos e análise (ver Data Card, seção 3)
+        + ["faixa_renda", "fim_de_semana", "tipo_area", "abep_pontos", "classe_abep",
+           "dia_atipico"]
         # targets e marcadores (NÃO usar como feature)
-        + ["y", "y_guarana", "pizza", "refri", "guarana"]
+        + ["y", "y_guarana", "pizza", "refri", "guarana", "local_pizza"]
     )
     return grid[colunas]
 
@@ -207,6 +271,9 @@ def validar(grid: pd.DataFrame, n_pessoa_dias: int) -> None:
     assert grid["y"].notna().all(), "target com nulos"
     for col in ["idade", "tipo_area", "classe_abep"]:
         assert grid[col].notna().all(), f"{col} com nulos"
+    assert grid.loc[~grid["pizza"], "local_pizza"].isna().all(), "local_pizza sem pizza no período"
+    lados = grid.groupby(CHAVE_DOM)["split"].nunique()
+    assert (lados == 1).all(), "domicílio nos dois lados do split"
 
 
 def _resumo(grid: pd.DataFrame) -> None:
@@ -227,7 +294,16 @@ def _resumo(grid: pd.DataFrame) -> None:
     print("\nTipo de área × situação do domicílio (UCs):")
     print(pd.crosstab(ucs["tipo_area"], ucs["urbano"].map({1: "urbano", 0: "rural"})).to_string())
 
-    nulos = grid.isna().sum()
+    print("\nLocal da pizza (só análise; nulo = local não declarado):")
+    com_pizza = grid[grid["pizza"]]
+    print(pd.DataFrame({
+        "períodos com pizza": com_pizza["local_pizza"].value_counts(dropna=False),
+        "pizza + refri (y=1)": com_pizza.loc[com_pizza["y"] == 1, "local_pizza"]
+        .value_counts(dropna=False),
+    }).to_string())
+
+    # local_pizza é nulo por desenho quando não há pizza no período
+    nulos = grid.drop(columns="local_pizza").isna().sum()
     print("\nNulos por coluna (só as que têm):")
     print(nulos[nulos > 0].to_string() if (nulos > 0).any() else "nenhum")
 

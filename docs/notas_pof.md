@@ -112,9 +112,11 @@ Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
 **Split temporal** (já com os inquilinos da decisão 3):
 | Conjunto | Período | `ordem_mes` | Linhas da grade | Positivos |
 |---|---|---|---|---|
-| Treino | jul/2017 a fev/2018 | 0–7 | 223.768 (65,8%) | 523 |
-| Teste | mar/2018 a jul/2018 | 8–12 | 116.296 (34,2%) | 315 |
+| Treino | jul/2017 a fev/2018 | 0–7 | 223.748 (65,8%) | 523 |
+| Teste | mar/2018 a jul/2018 | 8–12 | 116.316 (34,2%) | 315 |
 | Sem mês | — | — | 8 (1 pessoa) | 0 |
+
+O lado do corte é decidido por domicílio (`split_temporal` em `src/features/build_grid.py`): vale o mês da UC com a fonte mais confiável, e as UCs de um mesmo domicílio nunca ficam em lados diferentes. Sem essa regra, 1 domicílio ficava dividido: uma UC tinha mês pelo Aluguel Estimado (março, teste) e a outra só pela mediana dos vizinhos (janeiro, treino).
 
 ### 2. Renda (proxy de classe)
 **Decisão:** renda per capita = `RENDA_TOTAL` da UC ÷ nº de moradores da UC, em faixas de salário mínimo de 2018 (R$ 954).
@@ -134,7 +136,7 @@ Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
 
 **Limitação:** não é a classificação ABEP (Critério Brasil) usada pelo mercado. É apenas uma aproximação de classe.
 
-**Atualização (17/11):** a classe ABEP (decisão 5) virou a feature principal de classe social. A renda fica como alternativa a comparar nos experimentos.
+**Atualização (18/11):** na triagem com validação cruzada no treino (`notebooks/02_triagem_features.py`), a classe ABEP (decisão 5) não acrescentou ganho sobre a renda. A renda per capita contínua (`renda_pc`) é a feature do modelo, e as faixas (`faixa_renda`) ficam como alternativa a comparar na modelagem.
 
 ### 3. Mês da entrevista dos inquilinos
 **Problema:** quem mora de aluguel não tem o registro de Aluguel Estimado. Na primeira versão, 99% das pessoas "sem mês" eram inquilinos, e treino e teste tinham **zero** inquilinos (cerca de 16% da população, com taxa da ocasião maior que a média).
@@ -155,9 +157,12 @@ Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
 **Resultado:** 2.695 UCs pelo aluguel pago, 451 pelos vizinhos e 1 sem mês.
 
 ### 4. Tipo de área
-**Decisão:** `ESTRATO_POF` mapeado pela tabela oficial `Estratos POF 2017-2018.xls` em capital, região metropolitana, interior urbano e rural (`src/features/tipo_area.py`). Substitui `urbano` como feature.
+**Decisão:** `ESTRATO_POF` mapeado pela tabela oficial `Estratos POF 2017-2018.xls` em capital, região metropolitana, interior urbano e rural (`src/features/tipo_area.py`). Fica na base para os segmentos; no modelo, continua `urbano`.
 
-**Por quê:** `urbano` esconde uma diferença grande. Na triagem, a taxa noturna da ocasião foi 1,80% na capital, 1,44% na RM, 1,02% no interior urbano e 0,18% no rural. O "rural" do estrato coincide 100% com a situação do domicílio, então a nova variável só detalha o urbano.
+**Por quê:**
+- A diferença descritiva é grande: no treino, a taxa noturna da ocasião foi 1,74% na capital, 1,16% na RM, 0,97% no interior urbano e 0,19% no rural.
+- Mesmo assim, trocar `urbano` por `tipo_area` não trouxe ganho na triagem com validação cruzada no treino: PR-AUC −0,0024 no LightGBM e −0,0036 na Regressão Logística, sem significância (`notebooks/02_triagem_features.py`). Provavelmente `urbano` e `UF` já carregam quase toda essa diferença.
+- O "rural" do estrato coincide 100% com a situação do domicílio, então `tipo_area` só detalha o urbano.
 
 ### 5. Classe social pelo Critério Brasil (ABEP)
 **Decisão:** pontos do Critério Brasil (versão de 01/06/2019) calculados por UC (`src/features/classe_abep.py`):
@@ -171,9 +176,35 @@ Coluna `ordem_mes`: 0 = jul/2017 … 12 = jul/2018.
 
 Cortes: DE 0–16, C2 17–22, C1 23–28, B2 29–37, B1 38–44, A 45+.
 
+**Uso:** fica na base para os segmentos e para o Decision Engine; não entra no modelo.
+
 **Por quê:**
-- Separa a ocasião melhor que a renda: a taxa noturna vai de 0,34% (DE) a 2,57% (B1), uma diferença de 7,6 vezes (nas faixas de renda, 3,3 vezes).
-- É a classificação do mercado e do TAPI ("Classe A").
+- É a classificação do mercado e do TAPI ("Classe A"), então é a variável de público nos segmentos e nas regras.
+- Na descrição, separa a ocasião mais que a renda: no treino, a taxa noturna vai de 0,41% (DE) a 3,15% (B1), 7,7 vezes (nas faixas de renda, 2,9 vezes).
+- No modelo, somar a classe às 9 features não trouxe ganho na triagem com validação cruzada no treino: PR-AUC +0,0004 no LightGBM e −0,0014 na Regressão Logística, sem significância. Provavelmente renda e escolaridade já carregam quase toda essa informação.
 - A distribuição ponderada fica próxima da oficial (DE 32,2% contra 28,3%; A 2,1% contra 2,5%).
 
 **Aproximações:** faltam empregados domésticos e secadora; a POF só conta banheiro com chuveiro; não separa automóvel profissional; a pessoa de referência faz o papel de chefe da família.
+
+### 6. Local da pizza (só análise)
+**Decisão:** coluna `local_pizza` na grade, a partir do `V9018` dos registros de pizza (`src/features/build_grid.py`):
+
+| Grupo | Códigos do V9018 |
+|---|---|
+| `casa` | 1 em casa |
+| `estabelecimento` | 3 restaurante a quilo, 4 lanchonete/fast food, 5 restaurante |
+| `outro_fora` | 2 merenda, 6 ambulante, 7 outros lugares fora de casa |
+| nulo | 9 não declarado, ou período sem pizza |
+
+Com mais de uma pizza no período, vale a primeira em ordem de horário que tenha local declarado. Só 1 dos 1.716 períodos com pizza tem locais diferentes.
+
+**Por quê:**
+- O TAPI pede análise por canal, e a POF só registra o local da refeição. Como o local só existe para quem comeu, o resultado por canal é a captura das ocasiões de cada local, não uma precisão.
+- O Decision Engine precisa saber quais segmentos comem pizza em casa (regra de combo para casa). Essa taxa é calculada por segmento no treino. O local da linha nunca entra no modelo, porque só é observado junto com o consumo.
+
+**Resultado** (contagens sem peso, base inteira):
+
+| | Casa | Estabelecimento | Outro lugar fora | Não declarado |
+|---|---|---|---|---|
+| Períodos com pizza (1.716) | 1.216 (70,9%) | 237 (13,8%) | 262 (15,3%) | 1 |
+| Pizza + refri, `y = 1` (838) | 560 (66,8%) | 148 (17,7%) | 129 (15,4%) | 1 |

@@ -41,10 +41,8 @@ from pathlib import Path
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from scipy import stats
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score
-from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -59,6 +57,7 @@ from src.features.classe_abep import (  # noqa: E402
     COD_MOTOCICLETA,
 )
 from src.ingestion.pof import CHAVE_DOM, CHAVE_PESSOA, CHAVE_UC, ler_registro  # noqa: E402
+from src.models.validacao import K, REPETICOES, comparar, domicilio, particoes  # noqa: E402
 
 warnings.filterwarnings("ignore")
 pd.set_option("display.width", 200)
@@ -78,7 +77,6 @@ GRUPOS = {  # nome: (colunas que entram, colunas que saem)
 }
 CATEGORICAS = ["periodo", "dia_semana", "UF", "sexo", "tipo_area", "classe_abep", "posicao"]
 
-K, REPETICOES, ALFA = 5, 10, 0.05
 # Sem amostragem de linhas e colunas: o LightGBM fica determinístico, e a diferença
 # entre dois conjuntos de features vem só das features
 PARAMS_LGB = dict(n_estimators=300, learning_rate=0.03, num_leaves=15, min_child_samples=100,
@@ -201,13 +199,7 @@ for col in ["tipo_area", "classe_abep", "faixa_renda"]:
 # ## 3. Validação cruzada repetida
 
 # %%
-domicilio = df["COD_UPA"].astype(str) + "-" + df["NUM_DOM"].astype(str)
-FOLDS = [
-    (tr, va)
-    for r in range(REPETICOES)
-    for tr, va in StratifiedGroupKFold(n_splits=K, shuffle=True, random_state=r)
-    .split(df, df["y"], domicilio)
-]
+FOLDS = particoes(df["y"], domicilio(df))  # as mesmas partições da modelagem
 pos_fold = [int(df["y"].iloc[va].sum()) for _, va in FOLDS]
 print(f"{len(FOLDS)} folds ({REPETICOES} repetições × {K}); "
       f"positivos por fold: {min(pos_fold)} a {max(pos_fold)}")
@@ -253,21 +245,6 @@ def prauc(cols: list[str], algo: str) -> np.ndarray:
             r.append(average_precision_score(b["y"], p, sample_weight=b["peso_semana"]))
         _cache[chave] = np.array(r)
     return _cache[chave]
-
-
-def comparar(ref: np.ndarray, cand: np.ndarray) -> dict:
-    """Ganho médio e teste t corrigido para validação cruzada repetida.
-
-    Os folds compartilham dados de treino, então a variância ingênua subestima a
-    incerteza. A correção de Nadeau e Bengio (2003) soma n_validação / n_treino,
-    que é 1 / (K − 1) em K folds.
-    """
-    d = cand - ref
-    n = len(d)
-    se = np.sqrt((1 / n + 1 / (K - 1)) * d.var(ddof=1))
-    t = d.mean() / se if se > 0 else 0.0
-    p = float(stats.t.sf(t, df=n - 1))
-    return {"ganho": d.mean(), "t": t, "p": p, "passa": p < ALFA}
 
 
 def avaliar(ref_cols: list[str], cand_cols: list[str]) -> tuple[dict, dict, bool]:

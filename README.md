@@ -82,8 +82,9 @@ Protocolo fixado antes da avaliação final no período de teste (mar–jul/2018
 
 ### Baseline e candidatos
 - **Baseline:** taxa ponderada de `y` por dia da semana × período no treino (28 células), usada diretamente como score. É o "sexta à noite é bom para pizza" em forma de número.
-- **Regressão Logística:** features one-hot com regularização L2; `regiao` no lugar de `UF` (27 categorias são muitas para 523 positivos), `faixa_idade` no lugar de `idade` (o efeito da idade não é linear) e interação período × dia da semana, para conter o baseline.
+- **Regressão Logística:** categóricas em one-hot, numéricas padronizadas (anos de estudo, moradores e log da renda per capita) e regularização L2; `regiao` no lugar de `UF` (27 categorias são muitas para 523 positivos), `faixa_idade` no lugar de `idade` (o efeito da idade não é linear) e interação período × dia da semana, para conter o baseline.
 - **LightGBM raso:** poucas folhas e `min_child_samples` alto, porque o treino tem só 523 positivos.
+- **Preparo único:** todo modelo começa pelo mesmo preparo de features ([src/models/preparo.py](src/models/preparo.py)), que a API e o app também usam. Ele não aprende nada dos dados, porque faixas e regiões são fixas, e recusa valores que o modelo não conhece.
 
 ### Validação
 1. **Validação cruzada repetida no treino** (jul/2017–fev/2018): `StratifiedGroupKFold` com 5 folds, agrupado por domicílio para que a mesma família (que divide a pizza) não fique dos dois lados, e repetido 10 vezes com partições diferentes. Com só 523 positivos, uma única partição é ruidosa demais para decidir. A PR-AUC ponderada decide:
@@ -131,6 +132,7 @@ python notebooks/01_verificacao_pof.py   # sanidade da leitura, contagem da ocas
 python -m src.features.build_grid        # grade pessoa × dia × período → data/processed/grid.parquet
 python notebooks/02_triagem_features.py  # triagem de features com validação cruzada, só no treino
 python notebooks/03_eda.py               # análise exploratória (só treino) → reports/figures/
+python notebooks/04_modelagem.py         # baseline e candidatos na validação cruzada, só no treino
 ```
 
 ### Testes

@@ -49,6 +49,7 @@ DIAS = ["Segunda-Feira", "Terca-Feira", "Quarta-Feira", "Quinta-Feira",
 FAIXAS_RENDA = ["ate_0.5sm", "0.5_1sm", "1_2sm", "2_5sm", "acima_5sm"]
 FAIXAS_IDADE = ["10_17", "18_29", "30_44", "45_59", "60_mais"]
 REGIOES = {"1": "Norte", "2": "Nordeste", "3": "Sudeste", "4": "Sul", "5": "Centro-Oeste"}
+FIM_DE_SEMANA = ["Sexta-Feira", "Sabado", "Domingo"]
 
 # Origem do mês da entrevista, da mais para a menos confiável (Data Card, seção 5)
 FONTES_MES = ["aluguel_estimado", "aluguel_pago", "vizinhos_upa"]
@@ -88,6 +89,16 @@ def faixa_renda(renda_pc: pd.Series) -> pd.Series:
 
 def faixa_idade(idade: pd.Series) -> pd.Series:
     return pd.cut(idade, [10, 18, 30, 45, 60, np.inf], labels=FAIXAS_IDADE, right=False)
+
+
+def regiao_da_uf(uf: pd.Series) -> pd.Series:
+    """Grande região pelo 1º dígito do código IBGE da UF."""
+    return uf.astype(str).str[0].map(REGIOES)
+
+
+def fim_de_semana(dia_semana: pd.Series) -> pd.Series:
+    """1 de sexta a domingo."""
+    return dia_semana.astype(str).isin(FIM_DE_SEMANA).astype(int)
 
 
 def estacao(mes: pd.Series) -> pd.Series:
@@ -245,12 +256,11 @@ def montar_grid() -> pd.DataFrame:
     grid["faixa_idade"] = faixa_idade(grid["idade"])
 
     # 4) Território
-    grid["regiao"] = grid["UF"].str[0].map(REGIOES)
+    grid["regiao"] = regiao_da_uf(grid["UF"])
     grid["urbano"] = (grid["situacao"] == "1").astype(int)
 
     # 5) Tempo
-    fds = ["Sexta-Feira", "Sabado", "Domingo"]
-    grid["fim_de_semana"] = grid["dia_semana"].isin(fds).astype(int)
+    grid["fim_de_semana"] = fim_de_semana(grid["dia_semana"])
     grid["dia_atipico"] = (grid["dia_atipico"] == "1").astype(int)
     grid["estacao"] = estacao(grid["mes_entrevista"])
 
@@ -306,6 +316,7 @@ def _resumo(grid: pd.DataFrame) -> None:
     ucs = grid.drop_duplicates(subset=CHAVE_UC)
     dias = grid.drop_duplicates(subset=CHAVE_PESSOA + ["QUADRO"]).groupby(CHAVE_PESSOA).size()
     pos = grid[grid["y"] == 1]
+
     def taxa(d: pd.DataFrame, peso: str) -> float:
         return (d["y"] * d[peso]).sum() / d[peso].sum() * 100
 

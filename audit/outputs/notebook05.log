@@ -1,0 +1,99 @@
+Treino: 223,748 linhas, 523 positivos; prevalência ponderada 0.0030
+                                        modelo  PR-AUC média dos folds  PR-AUC agregada agregada, mín–máx  vezes a prevalência (agregada)  captura agregada
+                                      baseline                  0.0160           0.0143     0.0138–0.0148                          4.7381            0.5362
+                     Regressão Logística final                  0.0371           0.0276     0.0264–0.0290                          9.1129            0.6689
+Regressão Logística com dia da semana (C 0,03)                  0.0386           0.0292     0.0273–0.0319                          9.6430            0.6728
+
+Final ÷ baseline: 2.31 na média dos folds, 1.92 na agregada
+
+ repetição  agregada  média dos folds originais  média em quintos aleatórios
+         0    0.0274                     0.0377                       0.0355
+         1    0.0264                     0.0411                       0.0332
+         2    0.0280                     0.0377                       0.0362
+janela                                                   jul–set → out–nov   jul–nov → dez–jan       jul–jan → fev
+positivos                                                              151                 105                  67
+PR-AUC baseline                                                     0.0124              0.0128              0.0250
+PR-AUC Regressão Logística final                                    0.0291              0.0151              0.0382
+PR-AUC Regressão Logística com dia da semana (C 0,03)               0.0303              0.0174              0.0490
+captura baseline                                                     45.4%               55.1%               71.9%
+captura Regressão Logística final                                    62.3%               42.1%               74.4%
+captura Regressão Logística com dia da semana (C 0,03)               81.4%               42.5%               79.0%
+IC final − baseline                                     [+0.0026; +0.0580]  [-0.0071; +0.0269]  [-0.0028; +0.0550]
+região avaliada  positivos   taxa PR-AUC baseline PR-AUC final captura baseline captura final IC final − baseline
+          Norte         66 0.222%          0.0097       0.0190            49.7%         67.8%  [+0.0019; +0.0326]
+       Nordeste        171 0.206%          0.0112       0.0263            57.0%         74.8%  [+0.0052; +0.0457]
+        Sudeste        113 0.335%          0.0189       0.0349            61.3%         62.4%  [+0.0008; +0.0618]
+            Sul         95 0.443%          0.0169       0.0309            38.8%         61.2%  [+0.0050; +0.0417]
+   Centro-Oeste         78 0.289%          0.0109       0.0203            44.6%         52.5%  [+0.0015; +0.0451]
+PR-AUC média dos folds, por domicílio × por UPA: baseline 0.0160 × 0.0163; final 0.0371 × 0.0359
+UPAs com domicílios no treino e no teste: 1,044 de 5,404
+   segmento                nível  ocasiões prevista observada  observada ÷ prevista viés > 30% (30+ ocasiões)
+    periodo               almoco        12   0.063%    0.033%                  0.52                          
+    periodo                manha        13   0.063%    0.013%                  0.21                          
+    periodo                noite       481   1.023%    1.140%                  1.11                          
+    periodo                tarde        17   0.065%    0.024%                  0.38                          
+ dia_semana              Domingo       180   0.439%    0.497%                  1.13                          
+ dia_semana         Quarta-Feira        52   0.190%    0.170%                  0.90                          
+ dia_semana         Quinta-Feira        81   0.184%    0.280%                  1.52                       sim
+ dia_semana               Sabado        35   0.465%    0.525%                  1.13                          
+ dia_semana        Segunda-Feira        55   0.193%    0.157%                  0.81                          
+ dia_semana          Sexta-Feira        59   0.470%    0.308%                  0.66                       sim
+ dia_semana          Terca-Feira        61   0.184%    0.180%                  0.98                          
+     regiao         Centro-Oeste        78   0.389%    0.289%                  0.74                       sim
+     regiao             Nordeste       171   0.230%    0.206%                  0.90                          
+     regiao                Norte        66   0.243%    0.222%                  0.92                          
+     regiao              Sudeste       113   0.326%    0.335%                  1.03                          
+     regiao                  Sul        95   0.368%    0.443%                  1.21                          
+  tipo_area              capital       197   0.438%    0.444%                  1.01                          
+  tipo_area      interior_urbano       213   0.289%    0.266%                  0.92                          
+  tipo_area regiao_metropolitana        72   0.327%    0.409%                  1.25                          
+  tipo_area                rural        41   0.107%    0.067%                  0.63                       sim
+faixa_idade                10_17        97   0.165%    0.294%                  1.78                       sim
+faixa_idade                18_29       147   0.403%    0.484%                  1.20                          
+faixa_idade                30_44       170   0.394%    0.350%                  0.89                          
+faixa_idade                45_59        83   0.280%    0.194%                  0.69                       sim
+faixa_idade              60_mais        26   0.195%    0.159%                  0.81                          
+       sexo             feminino       270   0.290%    0.253%                  0.87                          
+       sexo            masculino       253   0.318%    0.357%                  1.12                          
+faixa_renda              0.5_1sm       108   0.168%    0.206%                  1.22                          
+faixa_renda                1_2sm       161   0.254%    0.296%                  1.17                          
+faixa_renda                2_5sm       159   0.468%    0.488%                  1.04                          
+faixa_renda            acima_5sm        41   1.044%    0.571%                  0.55                       sim
+faixa_renda            ate_0.5sm        54   0.099%    0.127%                  1.28                          
+classe_abep                    A        16   0.966%    0.416%                  0.43                          
+classe_abep                   B1        49   0.729%    1.121%                  1.54                       sim
+classe_abep                   B2       112   0.546%    0.397%                  0.73                       sim
+classe_abep                   C1       150   0.338%    0.385%                  1.14                          
+classe_abep                   C2       121   0.210%    0.274%                  1.30                       sim
+classe_abep                   DE        75   0.117%    0.093%                  0.79                          
+
+Por dia da semana (erro = previsto ÷ observado − 1):
+               ocasiões observada prevista final  erro final prevista com dia da semana  erro com dia da semana
+grupo                                                                                                          
+Segunda-Feira        55    0.157%         0.193%        0.23                     0.201%                    0.28
+Terca-Feira          61    0.180%         0.184%        0.03                     0.191%                    0.06
+Quarta-Feira         52    0.170%         0.190%        0.11                     0.185%                    0.09
+Quinta-Feira         81    0.280%         0.184%       -0.34                     0.250%                   -0.11
+Sexta-Feira          59    0.308%         0.470%        0.52                     0.357%                    0.16
+Sabado               35    0.525%         0.465%       -0.11                     0.369%                   -0.30
+Domingo             180    0.497%         0.439%       -0.12                     0.570%                    0.15
+Erro absoluto médio por dia: final 21%, com dia da semana 16%
+Tamanho efetivo dos 523 positivos: 138
+PR-AUC por fold, final: mín 0.0116, mediana 0.0315, máx 0.0905 (desvio-padrão 0.0188)
+PR-AUC sem peso (média dos folds): baseline 0.0116, final 0.0248
+   mês  positivos   taxa           IC 95%
+jul/17         47 0.352% [0.184%; 0.579%]
+ago/17         88 0.297% [0.192%; 0.407%]
+set/17         65 0.367% [0.196%; 0.582%]
+out/17         88 0.277% [0.173%; 0.389%]
+nov/17         63 0.309% [0.130%; 0.603%]
+dez/17         56 0.385% [0.175%; 0.674%]
+jan/18         49 0.133% [0.072%; 0.191%]
+fev/18         67 0.322% [0.127%; 0.570%]
+Bebidas no limite: AGUA TONICA DIET, AGUA TONICA LIGHT, AGUA TONICA TRADICIONAL, BEBIDA REFRIGERANTE, TIPO H2O, REFRIGERANTE DE QUININO DIETETICO
+Positivos do treino: 523 com a definição atual, 521 sem as bebidas no limite
+                           versão  log loss ponderado (média dos folds) média prevista taxa observada
+                     sem sigmoide                               0.01796         0.259%         0.302%
+        sigmoide + C da validação                               0.01681         0.403%         0.302%
+sigmoide + C × 4/5 (modelo final)                               0.01673         0.302%         0.302%
+.venv/bin/python notebooks/05_robustez.py  800.98s user 68.92s system 428% cpu 3:22.78 total

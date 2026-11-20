@@ -1,0 +1,71 @@
+Treino: 223,748 linhas, 523 positivos, 13,124 domicílios
+50 folds; positivos por fold: 104 a 105
+Prevalência ponderada média nos folds: 0.0030 (a PR-AUC de um score sem sinal)
+Baseline: PR-AUC 0.0160 (dp 0.0045) | captura no top 10%: 54.2% | 5.3 vezes a prevalência
+Regressão Logística: melhor C = 0.03 | PR-AUC 0.0386 (dp 0.0170) | captura no top 10%: 67.2% (56 s)
+
+    C  PR-AUC média  dp entre folds  captura top 10%
+0.001        0.0324          0.0175           0.5820
+0.003        0.0362          0.0180           0.6547
+0.010        0.0378          0.0167           0.6698
+0.030        0.0386          0.0170           0.6717
+0.100        0.0363          0.0147           0.6677
+0.300        0.0358          0.0146           0.6654
+1.000        0.0354          0.0143           0.6650
+PR-AUC: baseline 0.0160, Regressão Logística 0.0386; ganho +0.0226 (t = 2.59, p = 0.0063) → a Regressão Logística vence
+Captura no top 10%: baseline 54.2%, Regressão Logística 67.2%
+Regressão Logística à frente em 50 de 50 folds
+Com fim de semana: melhor C = 0.003 | PR-AUC 0.0371 (dp 0.0188) | captura no top 10%: 66.9% (88 s)
+dia da semana − fim de semana: PR-AUC +0.0015 (t = 0.25, p = 0.4) → fica fim de semana
+Com renda em faixas: melhor C = 0.1 | PR-AUC 0.0306 (dp 0.0107) | captura no top 10%: 67.4% (105 s)
+renda em faixas − renda contínua: PR-AUC -0.0065 (t = -0.72, p = 0.76) → fica renda contínua
+Com peso_semana no ajuste: melhor C = 0.003 | PR-AUC 0.0414 (dp 0.0245) | captura no top 10%: 65.3% (87 s)
+com peso_semana − sem peso: PR-AUC +0.0043 (t = 0.78, p = 0.22) → fica sem peso
+   4 folhas, mínimo de   300 linhas: PR-AUC 0.0280 (dp 0.0089) | captura no top 10%: 67.2% (37 s)
+   4 folhas, mínimo de  3000 linhas: PR-AUC 0.0281 (dp 0.0091) | captura no top 10%: 66.9% (88 s)
+   8 folhas, mínimo de   300 linhas: PR-AUC 0.0260 (dp 0.0085) | captura no top 10%: 64.5% (122 s)
+   8 folhas, mínimo de  3000 linhas: PR-AUC 0.0272 (dp 0.0095) | captura no top 10%: 64.7% (165 s)
+  16 folhas, mínimo de   300 linhas: PR-AUC 0.0265 (dp 0.0108) | captura no top 10%: 62.4% (252 s)
+  16 folhas, mínimo de  3000 linhas: PR-AUC 0.0284 (dp 0.0130) | captura no top 10%: 63.3% (113 s)
+Melhor LightGBM: 16 folhas, mínimo de 3000 linhas por folha
+LightGBM − Regressão Logística: PR-AUC -0.0087 (t = -0.92, p = 0.82) → fica Regressão Logística
+
+Modelo escolhido: {'modelo': 'regressao_logistica', 'C': 0.003, 'dia': 'fim_de_semana', 'renda': 'continua', 'peso_no_ajuste': False}
+                 ocasiões observada prevista antes prevista depois
+grupo                                                             
+todas as linhas       523    0.302%         0.259%          0.304%
+
+Ao longo do ranking do score:
+                 ocasiões observada prevista antes prevista depois
+grupo                                                             
+top 1%                 53    4.448%         1.176%          5.677%
+top 1–5%              122    1.929%         0.818%          2.314%
+top 5–10%             119    1.618%         0.605%          1.088%
+top 10–30%            190    0.415%         0.370%          0.340%
+top 30–50%             20    0.035%         0.225%          0.094%
+metade de baixo        19    0.020%         0.130%          0.026%
+
+Por dia da semana:
+               ocasiões observada prevista antes prevista depois
+grupo                                                           
+Segunda-Feira        55    0.157%         0.225%          0.193%
+Terca-Feira          61    0.180%         0.221%          0.184%
+Quarta-Feira         52    0.170%         0.223%          0.190%
+Quinta-Feira         81    0.280%         0.221%          0.184%
+Sexta-Feira          59    0.308%         0.312%          0.470%
+Sabado               35    0.525%         0.308%          0.465%
+Domingo             180    0.497%         0.301%          0.439%
+
+Log loss ponderado: 0.01796 sem a sigmoide, 0.01667 com; redução +0.00129 (t = 4.15, p = 6.5e-05) → a sigmoide entra
+Sigmoide final, com todas as previsões out-of-fold: a = 2.499, b = +8.230
+Cortes: alta com score ≥ 0.777%, media com score ≥ 0.144%
+       fatia do peso captura das ocasiões taxa observada  vezes a média
+classe                                                                 
+alta           10.0%                67.0%          2.03%            6.7
+media          20.0%                27.4%          0.41%            1.4
+baixa          70.0%                 5.6%          0.02%            0.1
+Modelo final na validação cruzada: PR-AUC 0.0371 (dp 0.0188) | captura no top 10%: 66.9% | 12.3 vezes a prevalência
+Contra o baseline: ganho de PR-AUC +0.0211 (t = 2.30, p = 0.013); à frente em 48 de 50 folds
+CONFIG de src/models/treinar.py confere: {'modelo': 'regressao_logistica', 'C': 0.003, 'dia': 'fim_de_semana', 'renda': 'continua', 'peso_no_ajuste': False, 'calibracao': True}
+.venv/bin/python notebooks/04_modelagem.py  3870.59s user 432.27s system 372% cpu 19:14.52 total
+exit 0

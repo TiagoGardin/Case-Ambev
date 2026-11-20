@@ -1,0 +1,47 @@
+Treino: 223,748 linhas, 523 positivos
+Nulos nas candidatas: nenhum
+
+[tipo_area] maior ÷ menor = 7.4 vezes
+                      taxa noturna (%)  positivos
+tipo_area                                        
+capital                           1.71        187
+regiao_metropolitana              1.50         67
+interior_urbano                   1.00        194
+rural                             0.23         33
+
+[classe_abep] maior ÷ menor = 12.9 vezes
+             taxa noturna (%)  positivos
+classe_abep                             
+DE                       0.34         68
+C2                       0.96        110
+C1                       1.45        135
+B2                       1.56        108
+B1                       4.40         46
+A                        1.53         14
+
+[faixa_renda] maior ÷ menor = 4.4 vezes
+             taxa noturna (%)  positivos
+faixa_renda                             
+ate_0.5sm                0.50         51
+0.5_1sm                  0.72        101
+1_2sm                    1.13        149
+2_5sm                    1.85        143
+acima_5sm                2.20         37
+50 folds (10 repetições × 5); positivos por fold: 104 a 105
+Base (9 features): PR-AUC média 0.0259 no LightGBM, 0.0356 na LR
+  Tipo de área no lugar de urbano: LightGBM -0.0027 (p = 0.83) | LR -0.0029 (p = 0.77)
+  Classe ABEP: LightGBM +0.0005 (p = 0.43) | LR +0.0014 (p = 0.40)
+  Composição da família: LightGBM -0.0004 (p = 0.57) | LR -0.0026 (p = 0.81)
+  Bens, finanças e moradia: LightGBM +0.0080 (p = 0.13) | LR +0.0013 (p = 0.45)
+  Trabalho e estudo: LightGBM +0.0003 (p = 0.42) | LR -0.0003 (p = 0.63)
+
+                          grupo  ganho LGB  p LGB  ganho LR   p LR  entra
+Tipo de área no lugar de urbano    -0.0027 0.8343   -0.0029 0.7679  False
+                    Classe ABEP     0.0005 0.4253    0.0014 0.4043  False
+          Composição da família    -0.0004 0.5744   -0.0026 0.8086  False
+       Bens, finanças e moradia     0.0080 0.1348    0.0013 0.4498  False
+              Trabalho e estudo     0.0003 0.4219   -0.0003 0.6255  False
+A classe ABEP não entrou; a renda continua.
+Conjunto final: ['periodo', 'dia_semana', 'UF', 'urbano', 'idade', 'sexo', 'anos_estudo', 'n_moradores', 'renda_pc']
+.venv/bin/python notebooks/02_triagem_features.py  2274.23s user 670.61s system 265% cpu 18:29.01 total
+exit 0

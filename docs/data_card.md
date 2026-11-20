@@ -1,6 +1,6 @@
 # Data Card – Occasion Intelligence Pizza + Guaraná
 
-Seções exigidas pelo TAPI (Seção 4). Itens marcados com _A preencher_ ainda estão em aberto.
+Seções exigidas pelo TAPI (Seção 4). As fontes ainda não integradas estão marcadas na seção 4.
 
 ## 1. Unidade de análise
 Pessoa × dia de recordatório × período do dia (manhã 5–10h, almoço 11–14h, tarde 15–17h, noite 18–4h).
@@ -11,7 +11,7 @@ Cada pessoa da POF relatou tudo o que comeu em 1 ou 2 dias não consecutivos. A 
 - **Definição:** `y = 1` se a pessoa consumiu pizza **e** refrigerante no mesmo período do mesmo dia.
 - **Tipo:** ground truth (consumo declarado em recordatório de 24h, POF 2017–2018).
 - **Tamanho:** 838 casos positivos em 340.072 linhas (0,34% ponderado por `peso_semana`; 0,31% só com o PESO_FINAL), em 817 pessoas de 522 domicílios.
-- **Códigos de alimentos:** classificação oficial do IBGE (subgrupos "Pizzas", "Refrigerantes", "Refrigerantes diet/light") mais busca pelo nome no cadastro, menos exclusões explícitas (mate, ice tea, Tampico, refresco natural, água gaseificada com sumo). Lista em `src/ingestion/codigos_alimentos.py`.
+- **Códigos de alimentos:** classificação oficial do IBGE (subgrupos "Pizzas", "Refrigerantes", "Refrigerantes diet/light") mais busca pelo nome no cadastro, menos exclusões explícitas (mate, ice tea, Tampico, refresco natural, água gaseificada com sumo). Lista em `src/ingestion/codigos_alimentos.py`. A lista mantém bebidas no limite da definição: água tônica (tradicional, diet e light), bebida refrigerante tipo H2O e refrigerante de quinino. Sem elas, o treino teria 521 positivos em vez de 523 ([notebooks/05_robustez.py](../notebooks/05_robustez.py), seção 8).
 - **Medida de marca (não é target):** participação do refrigerante de guaraná dentro das ocasiões positivas.
 - **Por que não pizza + guaraná como target:** são só 196 casos; com o split temporal sobrariam 55 no teste, pouco para avaliar com estabilidade. A participação do guaraná é analisada de forma descritiva, por segmento.
 
@@ -39,7 +39,7 @@ Escolhidas pela triagem com validação cruzada no treino (abaixo). `tipo_area` 
 
 **Triagem de candidatas** ([notebooks/02_triagem_features.py](../notebooks/02_triagem_features.py), 18/11/2026)
 
-Cada grupo foi somado às 9 features de partida (`periodo`, `dia_semana`, `UF`, `urbano`, `idade`, `sexo`, `anos_estudo`, `n_moradores`, `renda_pc`); o tipo de área entrou no lugar de `urbano`. A avaliação usou só o treino: validação cruzada em 5 folds agrupada por domicílio, repetida 10 vezes (50 folds), com PR-AUC ponderada por `peso_semana`, num LightGBM raso e numa Regressão Logística simples. Um grupo entraria se o ganho fosse significativo a 5% nos dois modelos, pelo teste t corrigido para validação cruzada repetida (Nadeau e Bengio, 2003); senão, fica a opção mais simples. Nenhum entrou. A PR-AUC da base foi 0,026 no LightGBM e 0,036 na Regressão Logística.
+Cada grupo foi somado às 9 features de partida (`periodo`, `dia_semana`, `UF`, `urbano`, `idade`, `sexo`, `anos_estudo`, `n_moradores`, `renda_pc`); o tipo de área entrou no lugar de `urbano`. A avaliação usou só o treino: validação cruzada em 5 folds agrupada por domicílio, repetida 10 vezes (50 folds), com PR-AUC ponderada por `peso_semana`, num LightGBM raso (300 árvores, 15 folhas, 100 linhas por folha) e numa Regressão Logística simples (C = 0,05, idade e idade², log da renda). Esses dois modelos são próprios da triagem e mais simples que os da seleção do modelo final. Um grupo entraria se o ganho fosse significativo a 5% nos dois modelos, pelo teste t corrigido para validação cruzada repetida (Nadeau e Bengio, 2003); senão, fica a opção mais simples. Nenhum entrou. A PR-AUC da base foi 0,026 no LightGBM e 0,036 na Regressão Logística.
 
 | Candidata | Ganho de PR-AUC no LightGBM (p) | Ganho na Regressão Logística (p) | Decisão |
 |---|---|---|---|
@@ -49,7 +49,11 @@ Cada grupo foi somado às 9 features de partida (`periodo`, `dia_semana`, `UF`, 
 | Bens, cartão de crédito, conta, plano de saúde, apartamento, aluguel | +0,0080 (0,13) | +0,0013 (0,45) | Não entra |
 | Trabalho ou rendimento, frequência à escola | +0,0003 (0,42) | −0,0003 (0,63) | Não entra |
 
-Versões anteriores, substituídas por esta: uma exploratória, de 16/11/2026, mediu os ganhos no período de teste; outra, de 18/11, usou uma única partição em 5 folds e se mostrou instável, porque uma mudança irrelevante no split inverteu a decisão de um grupo.
+Esta triagem substituiu duas versões anteriores:
+- **Exploratória, de 16/11/2026, feita fora do repositório.** Mediu no período de teste o ganho de ROC-AUC nas noites de sete grupos de candidatas sobre um LightGBM com as mesmas 9 features de partida (ROC-AUC de 0,814). Indicou incluir tipo de área e classe ABEP, que esta triagem, só com o treino, descartou.
+- **De 18/11, com uma única partição em 5 folds.** Mostrou-se instável: uma mudança irrelevante no split inverteu a decisão de um grupo.
+
+Nenhuma escolha do modelo final usa o período de teste, mas ele não é inédito ([README](../README.md), adendo de 20/11 em Metodologia).
 
 **Fora por desenho** (não medidas)
 | Candidata | Motivo |
@@ -63,8 +67,8 @@ Versões anteriores, substituídas por esta: uma exploratória, de 16/11/2026, m
 |---|---|---|---|---|
 | POF 2017–2018 – microdados (IBGE) | Ground truth + features | Pacote de 13/07/2023, baixado em 16/11/2026 | Pessoa × item consumido; morador; UC; domicílio | Chaves da POF (abaixo) |
 | Critério Brasil – ABEP | Tabela de pontos e cortes da classe social | Versão válida a partir de 01/06/2019 | Domicílio | — |
-| Open-Meteo / BrasilAPI | Chuva e feriado do dia no Decision Engine (não entram no modelo) | _A preencher_ | Município × dia | Município + data |
-| Vigitel 2006–2024, Censo 2022, OSM | Opcionais: contexto recente para o Mapa de Oportunidade | _A preencher_ | UF / capital | UF |
+| Open-Meteo / BrasilAPI | Chuva e feriado do dia no Decision Engine (não entram no modelo) | Ainda não integrado | Município × dia | Município + data |
+| Vigitel 2006–2024, Censo 2022, OSM | Opcionais: contexto recente para o Mapa de Oportunidade | Ainda não usado | UF / capital | UF |
 
 Registros da POF usados: Consumo Alimentar, Morador, Aluguel Estimado, Despesa Coletiva (quadro 10), Domicílio e Inventário.
 
@@ -81,6 +85,9 @@ Registros da POF usados: Consumo Alimentar, Morador, Aluguel Estimado, Despesa C
 
   **Validação da regra dos inquilinos:** aplicada a 3.943 UCs com mês conhecido que pagam prestação ou condomínio, fingindo não saber o mês: erro de no máximo 1 mês em 96,1% e mesmo lado do corte treino/teste em 97,0% (só vizinhos: 81,5% e 86,7%). Reproduzível em `notebooks/01_verificacao_pof.py`, seção 6.
 - **Split temporal:** treino com entrevistas de jul/2017 a fev/2018 (223.748 linhas, 523 positivos); teste de mar/2018 a jul/2018 (116.316 linhas, 315 positivos). O lado do corte é decidido por domicílio, porque as UCs de um domicílio são entrevistadas na mesma visita e a família divide a pizza. Vale o mês da UC com a fonte mais confiável (aluguel estimado, depois aluguel pago, depois vizinhos) e, em empate, o mais cedo.
+  - **Vizinhos dos dois lados do corte:** 1.044 das 5.404 UPAs têm domicílios no treino e no teste, porque são vizinhos entrevistados em meses diferentes.
+  - Com partições por UPA em vez de domicílio, a PR-AUC da seleção quase não muda (0,0359 contra 0,0371 no modelo final).
+  - Os intervalos de confiança do teste reamostram UPAs ([notebooks/05_robustez.py](../notebooks/05_robustez.py), seção 4).
 - **Tipo de área:** `ESTRATO_POF` (registro Morador) mapeado pela tabela oficial "Estratos POF 2017-2018.xls" em capital, região metropolitana, interior urbano e rural. O "rural" coincide 100% com a situação do domicílio.
 - **Classe ABEP:** pontos do Critério Brasil por UC, somando bens do Inventário, banheiros, água e pavimentação do Domicílio e a instrução da pessoa de referência (Morador). A distribuição ponderada fica próxima da oficial:
 
@@ -132,6 +139,7 @@ Base `data/processed/grid.parquet` (gerada por `src/features/build_grid.py`): 34
 - **Sem marca:** a POF não identifica marca; "guaraná" inclui Guaraná Antarctica, Kuat e marcas regionais.
 - **Sem delivery:** a POF registra só onde a pizza foi comida. Pizza pedida por delivery e comida em casa conta como `casa`, então uma regra de delivery no Decision Engine é premissa de negócio, não dado.
 - **Mês da entrevista estimado:** exato para as 84% das UCs com Aluguel Estimado; para os inquilinos, a regra erra no máximo 1 mês em 96% dos casos da validação.
+- **Um único ano de coleta:** no treino, janeiro tem taxa bem menor que os outros meses (0,13% contra 0,28% a 0,39%), e a Copa do Mundo de 2018 e as festas juninas só caem no período de teste. O mês não é feature (seção 3).
 - **Classe ABEP aproximada:**
   - Faltam empregados domésticos e secadora (subestima um pouco as classes altas).
   - A POF conta como banheiro só o que tem chuveiro e vaso.

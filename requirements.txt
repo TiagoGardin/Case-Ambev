@@ -1,6 +1,7 @@
 # Versões fixadas: o ambiente em que todo o projeto foi rodado (Python 3.12, ver .python-version)
 
 # Dados
+numpy==2.5.4
 pandas==3.1.1
 pyarrow==26.0.1
 openpyxl==3.1.5
@@ -9,6 +10,7 @@ requests==2.34.2
 
 # Modelagem e explicabilidade
 scikit-learn==1.9.1
+joblib==1.6.0
 scipy==1.18.1
 lightgbm==4.7.0
 shap==0.54.1

@@ -38,11 +38,14 @@ UFS = {"11": "RO", "12": "AC", "13": "AM", "14": "RR", "15": "PA", "16": "AP", "
        "42": "SC", "43": "RS", "50": "MS", "51": "MT", "52": "GO", "53": "DF"}
 SEXOS = ["feminino", "masculino"]
 PERIODO_DIA = [f"{d}|{p}" for d in DIAS for p in PERIODOS]
+# Alternativa do Data Card: sexta a domingo contra segunda a quinta, em cada período
+PERIODO_FDS = [f"{g}|{p}" for g in ("seg-qui", "sex-dom") for p in PERIODOS]
 
 CATEGORIAS = {
     "periodo": PERIODOS,
     "dia_semana": DIAS,
     "periodo_dia": PERIODO_DIA,
+    "periodo_fds": PERIODO_FDS,
     "UF": list(UFS),
     "regiao": list(REGIOES.values()),
     "sexo": SEXOS,
@@ -55,9 +58,9 @@ CATEGORIAS = {
 LIMITES = {"idade": (10, 110), "anos_estudo": (0, 16), "n_moradores": (1, 20),
            "renda_pc": (0, np.inf)}
 
-COLUNAS_PREPARADAS = ["periodo", "dia_semana", "periodo_dia", "fim_de_semana", "UF", "regiao",
-                      "urbano", "idade", "faixa_idade", "sexo", "anos_estudo", "n_moradores",
-                      "renda_pc", "log_renda_pc", "faixa_renda"]
+COLUNAS_PREPARADAS = ["periodo", "dia_semana", "periodo_dia", "fim_de_semana", "periodo_fds",
+                      "UF", "regiao", "urbano", "idade", "faixa_idade", "sexo", "anos_estudo",
+                      "n_moradores", "renda_pc", "log_renda_pc", "faixa_renda"]
 
 
 def validar_entrada(df: pd.DataFrame) -> None:
@@ -89,6 +92,8 @@ def preparar(df: pd.DataFrame) -> pd.DataFrame:
     out["periodo_dia"] = pd.Categorical(
         out["dia_semana"].astype(str) + "|" + out["periodo"].astype(str), PERIODO_DIA)
     out["fim_de_semana"] = fim_de_semana(out["dia_semana"])
+    grupo_dias = out["fim_de_semana"].map({0: "seg-qui", 1: "sex-dom"})
+    out["periodo_fds"] = pd.Categorical(grupo_dias + "|" + out["periodo"].astype(str), PERIODO_FDS)
     out["UF"] = pd.Categorical(df["UF"].astype(str), CATEGORIAS["UF"])
     out["regiao"] = pd.Categorical(regiao_da_uf(out["UF"]), CATEGORIAS["regiao"])
     out["urbano"] = df["urbano"].astype(int)

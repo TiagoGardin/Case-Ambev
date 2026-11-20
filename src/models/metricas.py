@@ -25,3 +25,12 @@ def captura_topo(y, score, peso, fracao: float = 0.10) -> float:
     antes = g["w"].cumsum() - g["w"]
     parte = ((fracao * g["w"].sum() - antes) / g["w"]).clip(0, 1)
     return float((parte * g["yw"]).sum() / g["yw"].sum())
+
+
+def percentil_ponderado(valores, peso, q: float) -> float:
+    """Menor valor v tal que as linhas com valor ≤ v somam pelo menos a fração q do peso."""
+    v = np.asarray(valores, dtype=float)
+    ordem = np.argsort(v, kind="stable")
+    acumulado = np.cumsum(np.asarray(peso, dtype=float)[ordem])
+    i = int(np.searchsorted(acumulado, q * acumulado[-1], side="left"))
+    return float(v[ordem][min(i, len(v) - 1)])

@@ -26,7 +26,7 @@ fontes (POF 2017-2018 do IBGE; Critério Brasil da ABEP)
 | `data/processed` | Bases tratadas (`.parquet`) |
 | `notebooks/` | EDA e experimentos |
 | `src/` | Código do pipeline |
-| `models/` | Modelos treinados (não versionados) |
+| `models/` | Modelo final congelado antes do teste e seus metadados (versionados) |
 | `reports/` | Gráficos para README e vídeo (`figures/`) e tabelas da análise exploratória |
 | `docs/` | Data Card, notas e regras do Decision Engine |
 | `tests/` | Testes (pytest) |
@@ -109,11 +109,63 @@ Protocolo fixado antes da avaliação final no período de teste (mar–jul/2018
 
 ## Resultados
 
-_A preencher._
+### Seleção do modelo (validação cruzada no treino)
+
+Tudo no treino, com as 50 partições e as regras da Metodologia ([notebooks/04_modelagem.py](notebooks/04_modelagem.py)). PR-AUC e captura são ponderadas por `peso_semana`. A prevalência, que é a PR-AUC de um score sem sinal, é 0,0030. Cada passo parte do vencedor do anterior, e a opção mais complexa só vence com ganho significativo.
+
+| Passo | Mais simples (PR-AUC) | Mais complexa (PR-AUC) | Ganho da mais complexa (p) | Fica |
+|---|---|---|---|---|
+| Modelo | baseline dia × período (0,0160) | Regressão Logística (0,0386) | +0,0226 (0,006) | Regressão Logística |
+| Dia | fim de semana (0,0371) | dia da semana (0,0386) | +0,0015 (0,40) | fim de semana |
+| Renda | contínua (0,0371) | 5 faixas (0,0306) | −0,0065 (0,76) | contínua |
+| Peso no ajuste | sem peso (0,0371) | `peso_semana` (0,0414) | +0,0043 (0,22) | sem peso |
+| Algoritmo | Regressão Logística (0,0371) | LightGBM raso, melhor de 6 (0,0284) | −0,0087 (0,82) | Regressão Logística |
+
+- **Quais opções contam como mais simples** ficou escrito no notebook antes de rodar. Para as alternativas do Data Card e para o LightGBM, isso segue o número de parâmetros.
+- **O peso no ajuste** era a decisão sem uma ordem óbvia. O ajuste sem peso foi tratado como o mais simples. O ajuste com peso teve a maior PR-AUC média, mas oscilou mais entre os folds (desvio-padrão de 0,0245 contra 0,0188), e o ganho não foi significativo. Tratado como hiperparâmetro (maior média), ele teria vencido.
+- **Modelo escolhido:** Regressão Logística com regularização L2 (C = 0,003), ajustada sem peso. Usa:
+  - período, fim de semana (sexta a domingo) e a interação período × fim de semana;
+  - região, urbano, faixa etária e sexo;
+  - anos de estudo, moradores e log da renda per capita.
+- **Desempenho na validação cruzada:** PR-AUC 0,0371, 12,3 vezes a prevalência, contra 0,0160 do baseline (ganho +0,0211, p = 0,013, à frente em 48 de 50 folds). Captura no top 10%: 66,9%, contra 54,2% do baseline.
+
+**Calibração.** A regularização forte deixa o score achatado em torno da média. Nas previsões out-of-fold:
+- **Sem sigmoide:**
+  - a média ficava abaixo da taxa ponderada (0,259% contra 0,302%);
+  - no 1% de maior score, a previsão era 1,18% contra 4,45% observados;
+  - na metade de baixo, 0,13% contra 0,02%.
+- **Com sigmoide:** a sigmoide ponderada (a = 2,50, b = +8,23) estica o score sem mudar a ordem. Medida com a sigmoide ajustada fora de cada fold:
+  - reduziu o log loss ponderado de 0,01796 para 0,01667 (p < 0,001);
+  - acertou o nível geral (0,304% previsto contra 0,302%).
+- **Desvios que ficam:**
+  - no topo: no 1% de maior score, 5,7% previsto contra 4,4% observado; entre 5% e 10%, 1,1% contra 1,6%;
+  - por dia, porque o modelo junta sexta com sábado e domingo: a sexta fica acima (0,47% previsto contra 0,31%) e a quinta abaixo (0,18% contra 0,28%).
+
+**Modelo final.** O modelo final foi ajustado em todo o treino com C × 4/5 = 0,0024 ([src/models/treinar.py](src/models/treinar.py)).
+- **Por quê:** no scikit-learn, o mesmo C regulariza relativamente menos quando há mais linhas. Cada modelo da validação cruzada usou 4/5 do treino, e a sigmoide foi ajustada nas previsões deles.
+- **O efeito:** com o C da validação, o modelo final saía menos achatado, e o score calibrado ficava 16% acima da taxa do treino (0,351% contra 0,302%). Com C × 4/5, fica em 0,302%.
+- **Quando foi feito:** tudo isso foi detectado e corrigido só com o treino, antes do teste.
+
+O modelo, a sigmoide, os cortes e as métricas estão em [models/](models/).
+
+**Classificação.** Os cortes são fixos e vão no `model_metadata`. Os números abaixo são das previsões out-of-fold calibradas do treino:
+
+| Classe | Score | Contextos | Ocasiões capturadas | Taxa observada | Vezes a média |
+|---|---|---|---|---|---|
+| `alta` | a partir de 0,777% | 10% | 67,0% | 2,03% | 6,7 |
+| `media` | de 0,144% a 0,777% | 20% | 27,4% | 0,41% | 1,4 |
+| `baixa` | abaixo de 0,144% | 70% | 5,6% | 0,02% | 0,1 |
+
+### Avaliação no teste
+
+_A preencher. O teste (mar–jul/2018) é aberto uma única vez, com o modelo de [models/](models/)._
 
 ## Limitações
 
-_A preencher._
+- **Calibração por dia:** o modelo usa fim de semana, e não o dia da semana, porque o dia não trouxe ganho significativo de PR-AUC. Por isso, ele dá a mesma probabilidade para sexta e domingo e para segunda e quinta, e a calibração por dia herda isso (Resultados).
+- **Calibração no topo:** a sigmoide tem dois parâmetros e corrige o nível e a escala, não cada faixa do ranking. No 1% de maior score, ela superestima a taxa.
+
+_A completar com a avaliação no teste._
 
 ## Como executar
 
@@ -132,7 +184,8 @@ python notebooks/01_verificacao_pof.py   # sanidade da leitura, contagem da ocas
 python -m src.features.build_grid        # grade pessoa × dia × período → data/processed/grid.parquet
 python notebooks/02_triagem_features.py  # triagem de features com validação cruzada, só no treino
 python notebooks/03_eda.py               # análise exploratória (só treino) → reports/figures/
-python notebooks/04_modelagem.py         # baseline e candidatos na validação cruzada, só no treino
+python notebooks/04_modelagem.py         # seleção do modelo na validação cruzada, só no treino
+python -m src.models.treinar             # modelo final → models/ (congelado antes do teste)
 ```
 
 ### Testes
@@ -141,4 +194,4 @@ python notebooks/04_modelagem.py         # baseline e candidatos na validação 
 python -m pytest
 ```
 
-_Comandos de modelos, API e app a preencher._
+_Comandos da API e do app a preencher._

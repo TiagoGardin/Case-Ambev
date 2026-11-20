@@ -14,4 +14,7 @@ data/processed/*
 # Artefatos de modelo e experimentos
 models/*
 !models/.gitkeep
+# O modelo final vai para o git: o commit registra o modelo congelado antes do teste
+!models/occasion_model.joblib
+!models/model_metadata.json
 mlruns/

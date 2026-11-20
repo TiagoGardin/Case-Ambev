@@ -1,0 +1,91 @@
+{
+  "model_name": "occasion-score-pizza-refrigerante",
+  "model_version": "1.0.0",
+  "trained_at": "2026-11-20T17:45:41-03:00",
+  "algorithm": "Regressão Logística com regularização L2",
+  "config": {
+    "modelo": "regressao_logistica",
+    "C": 0.003,
+    "dia": "fim_de_semana",
+    "renda": "continua",
+    "peso_no_ajuste": false,
+    "calibracao": true
+  },
+  "final_fit": {
+    "config": {
+      "modelo": "regressao_logistica",
+      "C": 0.0024,
+      "dia": "fim_de_semana",
+      "renda": "continua",
+      "peso_no_ajuste": false,
+      "calibracao": true
+    },
+    "note": "Regressão Logística: C × (k − 1)/k no treino todo, a mesma regularização por linha dos modelos da validação cruzada em que a sigmoide foi ajustada"
+  },
+  "features": [
+    "periodo",
+    "dia_semana",
+    "UF",
+    "urbano",
+    "idade",
+    "sexo",
+    "anos_estudo",
+    "n_moradores",
+    "renda_pc"
+  ],
+  "target": "pizza e refrigerante no mesmo período (pessoa × dia × período)",
+  "training_data": {
+    "source": "POF 2017-2018 (IBGE), recordatório alimentar de 24h",
+    "period": "jul/2017 a fev/2018 (teste: mar a jul/2018, não usado)",
+    "rows": 223748,
+    "occasions": 523,
+    "households": 13124
+  },
+  "reference_rate": 0.0030247934730865088,
+  "calibration": {
+    "method": "sigmoide ponderada sobre o logit (Platt)",
+    "a": 2.499378533006631,
+    "b": 8.229964043424394,
+    "weighted_mean_score_train": 0.003022647053746816
+  },
+  "classification": {
+    "cuts": {
+      "alta": 0.007765464212035935,
+      "media": 0.0014357961786816277
+    },
+    "rule": "alta se score >= cuts.alta (P90 ponderado das previsões out-of-fold calibradas); media se score >= cuts.media (P70); senão baixa",
+    "weight_share_oof": {
+      "baixa": 0.6999998806713369,
+      "media": 0.19999787931183274,
+      "alta": 0.10000224001683039
+    },
+    "occasion_capture_oof": {
+      "baixa": 0.05636010785384823,
+      "media": 0.2741104938683888,
+      "alta": 0.669529398277763
+    },
+    "weight_share_train_final_model": {
+      "baixa": 0.7002494243250236,
+      "media": 0.19954489614299825,
+      "alta": 0.10020567953197818
+    }
+  },
+  "cross_validation": {
+    "scheme": "StratifiedGroupKFold por domicílio, 5 folds × 10 repetições, só treino",
+    "metric_weight": "peso_semana",
+    "prauc_mean": 0.03710491256195726,
+    "prauc_sd": 0.018772399389241197,
+    "capture_top10_mean": 0.6687021847903241,
+    "baseline_prauc_mean": 0.01604427887385859,
+    "baseline_capture_top10_mean": 0.5419150423020862
+  },
+  "libraries": {
+    "python": "3.12.14",
+    "scikit-learn": "1.9.1",
+    "lightgbm": "4.7.0",
+    "pandas": "3.1.1",
+    "numpy": "2.5.4"
+  },
+  "model_file": "occasion_model.joblib",
+  "model_file_sha256": "12a7f3f80b1228c3ad9700d405edec43035a9d1af99544ccd95626487633c2a2"
+}

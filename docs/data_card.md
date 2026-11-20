@@ -21,13 +21,13 @@ Cada pessoa da POF relatou tudo o que comeu em 1 ou 2 dias não consecutivos. A 
 **Features do modelo**
 | Grupo | Features |
 |---|---|
-| Quando | `periodo`, `dia_semana` |
+| Quando | `periodo`, `dia_semana` (ou `fim_de_semana`, no modelo final) |
 | Onde | `UF` (ou `regiao`, na regressão logística), `urbano` |
 | Quem | `idade` (ou `faixa_idade`), `sexo`, `anos_estudo`, `n_moradores`, `renda_pc` |
 
 Escolhidas pela triagem com validação cruzada no treino (abaixo). `tipo_area` e `classe_abep` continuam na base para os segmentos e para o Decision Engine.
 
-**Alternativas a comparar nos experimentos:** `faixa_renda` no lugar de `renda_pc`; `fim_de_semana` no lugar de `dia_semana`.
+**Alternativas comparadas na seleção do modelo:** `faixa_renda` no lugar de `renda_pc`; `fim_de_semana` no lugar de `dia_semana`. Na validação cruzada do treino ([README](../README.md), Resultados), o modelo final ficou com `fim_de_semana`, porque o dia da semana não trouxe ganho significativo, e com `renda_pc`, porque as faixas não ganharam. O `dia_semana` continua sendo a entrada da API e do app; o preparo deriva dele o fim de semana.
 
 **Excluídas por leakage**
 - `V9017` (tipo de refeição), `V9018` (local da refeição) e outros alimentos do mesmo período: são observados junto com o consumo. O local da pizza fica na base só como coluna de análise (`local_pizza`): mede o desempenho por canal e dá as taxas de consumo em casa por segmento que o Decision Engine usa.
@@ -115,9 +115,9 @@ Base `data/processed/grid.parquet` (gerada por `src/features/build_grid.py`): 34
 | `n_moradores` | Morador (contagem por UC) | int | **Feature** | Tamanho da unidade de consumo |
 | `abep_pontos`, `classe_abep` | Inventário + Domicílio + Morador | int / cat | Segmento | Pontos e classe do Critério Brasil (DE, C2, C1, B2, B1, A); também usada no Decision Engine |
 | `renda_pc` | Consumo (RENDA_TOTAL) ÷ n_moradores | float | **Feature** | Renda per capita da UC |
-| `faixa_renda` | Derivada de `renda_pc` | cat | Alternativa | Faixa de renda per capita em salários mínimos de 2018 |
+| `faixa_renda` | Derivada de `renda_pc` | cat | Alternativa (não entrou) | Faixa de renda per capita em salários mínimos de 2018 |
 | `urbano` | Consumo (TIPO_SITUACAO_REG) | 0/1 | **Feature** | Domicílio urbano (o rural coincide com o de `tipo_area`) |
-| `fim_de_semana` | Derivada | 0/1 | Alternativa | Sexta, sábado ou domingo |
+| `fim_de_semana` | Derivada de `dia_semana` | 0/1 | **Feature** (no lugar do dia da semana) | Sexta, sábado ou domingo; o modelo final usa também a interação com o período |
 | `dia_atipico` | Consumo (DIA_ATIPICO) | 0/1 | Análise (leakage) | Pessoa declarou que o dia foi atípico |
 
 ## 7. População coberta e excluída

@@ -54,9 +54,20 @@ class ResultadoCV:
                 f"captura no top 10%: {self.captura10.mean():.1%}")
 
 
+def normalizar(peso) -> np.ndarray:
+    """Peso do ajuste com média 1.
+
+    A Regressão Logística minimiza C × Σ peso × perda + penalidade, então a força
+    da regularização dependeria da escala do peso (o `peso_semana` está na casa dos
+    milhares). Com média 1, o C tem o mesmo sentido com e sem peso.
+    """
+    peso = np.asarray(peso, dtype=float)
+    return peso / peso.mean()
+
+
 def _prever_fold(modelo, X: pd.DataFrame, y: np.ndarray, peso_ajuste, tr, va) -> np.ndarray:
     m = clone(modelo)
-    extra = {} if peso_ajuste is None else {"modelo__sample_weight": peso_ajuste[tr]}
+    extra = {} if peso_ajuste is None else {"modelo__sample_weight": normalizar(peso_ajuste[tr])}
     with warnings.catch_warnings():
         warnings.simplefilter("error", ConvergenceWarning)  # sem convergência, a validação para
         m.fit(X.iloc[tr], y[tr], **extra)
@@ -68,7 +79,8 @@ def validar_cv(modelo, X: pd.DataFrame, y, peso, folds, peso_ajuste=None, k: int
     """Ajusta uma cópia de `modelo` em cada fold e mede na parte de validação.
 
     `folds` vem de `particoes` (k folds por repetição, em ordem). `peso` pondera as
-    métricas; `peso_ajuste`, se dado, entra no ajuste do modelo.
+    métricas; `peso_ajuste`, se dado, entra no ajuste do modelo, com média 1 em cada
+    fold (`normalizar`).
     """
     y = np.asarray(y)
     peso = np.asarray(peso, dtype=float)

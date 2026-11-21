@@ -1,0 +1,205 @@
+{
+  "description": "Contexto observado do Decision Engine: local da pizza e participação do guaraná nas ocasiões de pizza + refrigerante",
+  "source": "treino (jul/2017 a fev/2018), ocasiões de pizza + refrigerante",
+  "weights": "peso_semana",
+  "interval": "95%, bootstrap de UPAs (1000 reamostragens, semente 0)",
+  "notes": [
+    "casa inclui delivery: a POF não separa",
+    "guarana é a categoria (qualquer marca), não a Guaraná Antarctica"
+  ],
+  "created_at": "2026-11-21T03:01:05-03:00",
+  "brasil": {
+    "ocasioes": 523,
+    "ocasioes_efetivas": 138.0,
+    "casa": {
+      "participacao": 0.6483979234262958,
+      "ic95": [
+        0.5380625029350712,
+        0.7507673652601465
+      ]
+    },
+    "estabelecimento": {
+      "participacao": 0.14381619202785054,
+      "ic95": [
+        0.09523541864362862,
+        0.21193550025365973
+      ]
+    },
+    "outro_fora": {
+      "participacao": 0.20698051437314224,
+      "ic95": [
+        0.11374290907762176,
+        0.3187696870273181
+      ]
+    },
+    "guarana": {
+      "participacao": 0.2797932132734702,
+      "ic95": [
+        0.18569220530456934,
+        0.37627216912048456
+      ]
+    }
+  },
+  "regioes": {
+    "Norte": {
+      "ocasioes": 66,
+      "ocasioes_efetivas": 17.2,
+      "casa": {
+        "participacao": 0.5105890617179962,
+        "ic95": [
+          0.27974866178509006,
+          0.7846539853818005
+        ]
+      },
+      "estabelecimento": {
+        "participacao": 0.3023420102302442,
+        "ic95": [
+          0.049285374551713286,
+          0.5547232273873707
+        ]
+      },
+      "outro_fora": {
+        "participacao": 0.18706892805175981,
+        "ic95": [
+          0.07189553587014863,
+          0.36408076828750746
+        ]
+      },
+      "guarana": {
+        "participacao": 0.15999277626479894,
+        "ic95": [
+          0.033895810428966326,
+          0.3771081005932456
+        ]
+      }
+    },
+    "Nordeste": {
+      "ocasioes": 171,
+      "ocasioes_efetivas": 101.3,
+      "casa": {
+        "participacao": 0.5477202544449588,
+        "ic95": [
+          0.4318803696775025,
+          0.6582352615716599
+        ]
+      },
+      "estabelecimento": {
+        "participacao": 0.14733269592738055,
+        "ic95": [
+          0.0849400657408095,
+          0.21986736261639153
+        ]
+      },
+      "outro_fora": {
+        "participacao": 0.3049470496276606,
+        "ic95": [
+          0.19459335985569687,
+          0.4192638692737494
+        ]
+      },
+      "guarana": {
+        "participacao": 0.2535835014871664,
+        "ic95": [
+          0.14944648911377795,
+          0.36452403687863616
+        ]
+      }
+    },
+    "Sudeste": {
+      "ocasioes": 113,
+      "ocasioes_efetivas": 39.5,
+      "casa": {
+        "participacao": 0.6838804106195023,
+        "ic95": [
+          0.4708417660458721,
+          0.8710994600673233
+        ]
+      },
+      "estabelecimento": {
+        "participacao": 0.14119182552858897,
+        "ic95": [
+          0.061924679028575805,
+          0.2672960152429725
+        ]
+      },
+      "outro_fora": {
+        "participacao": 0.1732488780375312,
+        "ic95": [
+          0.0035715368005935742,
+          0.3985045796189161
+        ]
+      },
+      "guarana": {
+        "participacao": 0.30501883315932155,
+        "ic95": [
+          0.12673860659590647,
+          0.4714587491454726
+        ]
+      }
+    },
+    "Sul": {
+      "ocasioes": 95,
+      "ocasioes_efetivas": 56.3,
+      "casa": {
+        "participacao": 0.7366556097985173,
+        "ic95": [
+          0.5892008848073363,
+          0.8534573011337309
+        ]
+      },
+      "estabelecimento": {
+        "participacao": 0.10311250006467036,
+        "ic95": [
+          0.02892497356219036,
+          0.20741205208974892
+        ]
+      },
+      "outro_fora": {
+        "participacao": 0.16023189013681238,
+        "ic95": [
+          0.061731503747049145,
+          0.27273810026299894
+        ]
+      },
+      "guarana": {
+        "participacao": 0.2593404036649788,
+        "ic95": [
+          0.11430756467825708,
+          0.41053556860983303
+        ]
+      }
+    },
+    "Centro-Oeste": {
+      "ocasioes": 78,
+      "ocasioes_efetivas": 46.5,
+      "casa": {
+        "participacao": 0.5359817416802988,
+        "ic95": [
+          0.3368653170156536,
+          0.7492236648501233
+        ]
+      },
+      "estabelecimento": {
+        "participacao": 0.12287186909836559,
+        "ic95": [
+          0.03800267058396533,
+          0.23614728581359654
+        ]
+      },
+      "outro_fora": {
+        "participacao": 0.34114638922133567,
+        "ic95": [
+          0.11849275606811145,
+          0.5422573090670738
+        ]
+      },
+      "guarana": {
+        "participacao": 0.3464119068023437,
+        "ic95": [
+          0.14457161961701376,
+          0.5399534468533046
+        ]
+      }
+    }
+  }
+}

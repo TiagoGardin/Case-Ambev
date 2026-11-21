@@ -26,7 +26,7 @@ fontes (POF 2017-2018 do IBGE; Critério Brasil da ABEP)
 | `data/processed` | Bases tratadas (`.parquet`) |
 | `notebooks/` | EDA e experimentos |
 | `src/` | Código do pipeline |
-| `models/` | Modelo final congelado antes do teste e seus metadados (versionados) |
+| `models/` | Modelo final congelado antes do teste e seus metadados, a referência do SHAP e o contexto do Decision Engine (versionados) |
 | `reports/` | Gráficos para README e vídeo (`figures/`) e tabelas da análise exploratória |
 | `docs/` | Data Card, notas e regras do Decision Engine |
 | `tests/` | Testes (pytest) |
@@ -216,6 +216,68 @@ As checagens foram feitas depois da seleção e da auditoria de 20/11, antes do 
 
 _A preencher. O modelo de [models/](models/) é avaliado uma única vez no teste (mar–jul/2018), conforme a Metodologia e o adendo de 20/11._
 
+## Decision Engine e API
+
+### Explicação de cada previsão (`top_factors`)
+O `top_factors` traz os 3 fatores que mais movem o score de cada contexto, calculados pelo SHAP exato da Regressão Logística ([src/models/explicar.py](src/models/explicar.py)).
+- **Fórmula:** num modelo linear, o SHAP de cada coluna é coeficiente × (valor − referência). A referência é a média do treino, ponderada por `peso_semana`.
+- **Fatores:** as colunas que vêm da mesma entrada formam 8 fatores: momento (período e fim de semana, com a interação), região, faixa de idade, sexo, escolaridade, moradores, renda e área.
+- **Leitura:** cada fator mostra a contribuição no log-odds do score calibrado e quanto ele multiplica a chance da ocasião em relação ao contexto médio do treino.
+- **Conferência:** os testes comparam o resultado com o valor de Shapley calculado pela definição e com a biblioteca `shap`.
+- **Importância no treino:** média do |log-odds| de 1,03 no momento, 0,56 na escolaridade e 0,36 na renda. Os outros fatores ficam abaixo de 0,2.
+
+### Decision Engine
+Regras documentadas transformam o score numa categoria de ativação, com justificativa ([docs/decision_engine.md](docs/decision_engine.md)). Não existe histórico de ações e resultados para treinar um segundo modelo, por isso as regras são explícitas e auditáveis.
+
+Elas combinam três coisas:
+- a classe do score;
+- o canal (delivery, varejo ou estabelecimento), informado por quem usa a API;
+- a associação atual à marca no segmento, também informada por quem usa a API.
+
+As justificativas citam os fatores do SHAP e o contexto observado na POF: onde a pizza foi comida e quantas ocasiões tiveram guaraná, por região e com intervalo. Nenhuma justificativa afirma efeito causal.
+
+| Regra | Quando se aplica | Categoria |
+|---|---|---|
+| R1 | Classe `baixa` | `sem_ativacao_dedicada` |
+| R2 | Classe `alta` ou `media` e associação à marca baixa | `awareness_associacao` |
+| R3 | Classe `alta` e canal delivery | `ativacao_delivery` |
+| R4 | Classe `alta` e canal estabelecimento | `ativacao_ponto_de_consumo` |
+| R5 | Classe `alta` e canal varejo ou não informado | `combo_consumo_em_casa` |
+| R6 | Classe `media` | `presenca_de_marca` |
+
+A associação à marca é informada, e não calculada, por dois motivos:
+- **Incerteza:** a participação do guaraná por região tem intervalos largos. No Norte, por exemplo, é de 16%, com intervalo de 3% a 38%, e nenhuma região fica abaixo da média nacional com segurança.
+- **Categoria, não marca:** a POF registra o refrigerante de guaraná de qualquer marca, não a Guaraná Antarctica.
+
+A casa inclui delivery, porque a POF não os separa. A casa reúne 65% das ocasiões no Brasil e é o local mais comum em todas as regiões.
+
+### API
+A API foi feita em FastAPI, com validação em Pydantic ([src/api/main.py](src/api/main.py)). Ao subir, ela carrega o modelo, a referência do SHAP e o contexto. Também confere o hash do modelo e se a referência do SHAP é desse mesmo modelo.
+
+**Endpoints:**
+- `POST /predict` devolve os 6 campos do contrato.
+- `GET /health`, `GET /model` e `GET /rules` dão o estado do serviço, os metadados e as regras.
+- `/docs` traz a documentação interativa.
+
+**Entrada:**
+- **Quando:** `periodo` e `dia_semana`.
+- **Onde:** `uf` e `urbano`.
+- **Quem:** `idade`, `sexo`, `anos_estudo`, `n_moradores` e `renda_pc`.
+- **Opcionais:** `canal` e `associacao_marca`, que vão para o Decision Engine, e `model_version`. Se a versão pedida não for a carregada, a API devolve 409.
+
+Exemplo de domingo à noite em SP, com canal delivery:
+
+| Campo | Valor |
+|---|---|
+| `occasion_score` | 0,0288 (2,88%, 9,5 vezes a taxa média do treino) |
+| `classification` | `alta` |
+| `top_factors` | momento: noite de sexta a domingo (chance × 13,2); renda: R$ 4.000 por pessoa ao mês (× 1,8); escolaridade: 12 anos (× 1,6) |
+| `recommendation_category` | `ativacao_delivery` (regra R3) |
+| `recommendation_reason` | Texto com o score, a regra, o contexto observado na região e os fatores |
+| `model_metadata` | Versão, data de treino, hash do arquivo, cortes das classes, regra aplicada e avisos de uso |
+
+O × 13,2 do momento compara com o contexto médio do treino, que mistura todos os períodos e dias.
+
 ## Limitações
 
 - **Ganho instável no tempo:** na validação com origem móvel dentro do treino, o ganho sobre o baseline só foi significativo em uma das três janelas. Em dez–jan, a captura do modelo ficou abaixo da do baseline (Resultados, Robustez). É o teste que vai mostrar se o ganho se mantém.
@@ -255,6 +317,24 @@ python notebooks/03_eda.py               # análise exploratória (só treino) �
 python notebooks/04_modelagem.py         # seleção do modelo na validação cruzada, só no treino
 python -m src.models.treinar             # modelo final → models/ (congelado antes do teste)
 python notebooks/05_robustez.py          # checagens de robustez do modelo escolhido, só no treino
+python -m src.models.explicar            # referência do SHAP por fator → models/explicacao.json (só treino)
+python -m src.decision_engine.contexto   # contexto do Decision Engine → models/contexto_decisao.json (só treino)
+python notebooks/06_teste.py             # avaliação única no teste → reports/teste_tabelas.md
+```
+
+O modelo, a referência do SHAP e o contexto do Decision Engine estão versionados em `models/`, então a API e o app rodam sem os microdados.
+
+### Subir a API
+
+```bash
+uvicorn src.api.main:app --reload        # documentação interativa em http://localhost:8000/docs
+```
+
+```bash
+curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{
+  "periodo": "noite", "dia_semana": "Domingo", "uf": "SP", "urbano": true, "idade": 25,
+  "sexo": "feminino", "anos_estudo": 12, "n_moradores": 3, "renda_pc": 4000,
+  "canal": "delivery"}'
 ```
 
 ### Testes
@@ -263,4 +343,4 @@ python notebooks/05_robustez.py          # checagens de robustez do modelo escol
 python -m pytest
 ```
 
-_Comandos da API e do app a preencher._
+_Comandos do app a preencher._

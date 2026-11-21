@@ -376,7 +376,7 @@ ax1.set_xlabel("Recall (fração das ocasiões encontradas)")
 ax1.set_ylabel("Precisão")
 ax1.set_ylim(0, topo * 1.15)
 ax1.xaxis.set_major_formatter(eixo_pct)
-ax1.yaxis.set_major_formatter(eixo_pct)
+ax1.yaxis.set_major_formatter(FuncFormatter(lambda v, _: pct(v, 1)))  # marcas de 0,5% em 0,5%
 ax1.set_title("Precisão × recall no teste")
 ax1.legend(frameon=False, fontsize=8.5)
 

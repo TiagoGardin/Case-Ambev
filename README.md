@@ -214,7 +214,52 @@ As checagens foram feitas depois da seleção e da auditoria de 20/11, antes do 
 
 ### Avaliação no teste
 
-_A preencher. O modelo de [models/](models/) é avaliado uma única vez no teste (mar–jul/2018), conforme a Metodologia e o adendo de 20/11._
+O modelo congelado foi avaliado uma única vez no teste (mar–jul/2018), em 21/11/2026, com o notebook commitado antes da rodada ([notebooks/06_teste.py](notebooks/06_teste.py), commit c819652). As tabelas completas estão em [reports/teste_tabelas.md](reports/teste_tabelas.md) e a saída da rodada em [reports/teste_saida.log](reports/teste_saida.log).
+
+O teste tem 116.316 linhas e 315 ocasiões em 189 domicílios (118 ocasiões efetivas), com taxa ponderada de 0,406%. As métricas são ponderadas por `peso_semana`, com intervalo de 95% por bootstrap pareado de UPAs (1.000 reamostragens).
+
+**Pela regra fixada antes, o modelo final não pode ser declarado melhor que o baseline.** A diferença de PR-AUC foi de +0,0045, com intervalo de −0,0029 a +0,0138, que inclui zero. Em 89,8% das reamostragens a diferença foi positiva.
+
+| Métrica | Modelo final | Baseline | Validação cruzada (agregada): final / baseline |
+|---|---|---|---|
+| PR-AUC | 0,0265 (0,0190 a 0,0384) | 0,0220 (0,0138 a 0,0344) | 0,0276 / 0,0143 |
+| PR-AUC ÷ prevalência | 6,5 vezes | 5,4 vezes | 9,1 / 4,7 vezes |
+| Captura no top 5% / 10% / 20% | 39,6% / 67,8% / 89,2% | 34,3% / 57,1% / 78,5% | top 10%: 66,9% / 53,6% |
+| ROC-AUC | 0,890 | 0,860 | |
+| Precisão / recall / F1 no corte de `alta` | 2,7% / 68,6% / 5,2% | 2,3% / 60,0% / 4,4% | |
+| Brier | 0,00401 | 0,00400 | |
+
+![À esquerda, a curva de precisão × recall do modelo final fica acima da do baseline em quase todo o recall; à direita, a calibração por decil acompanha a diagonal, com a taxa observada acima da prevista no topo](reports/figures/teste_1_precisao_calibracao.png)
+
+- **O modelo manteve o nível da validação, e o baseline melhorou:**
+  - A PR-AUC foi de 0,0265 no teste, contra 0,0276 na validação.
+  - A captura no top 10% foi de 67,8%, contra 66,9%.
+  - A classe `alta` reuniu 68,6% das ocasiões em 10,4% do peso, contra 67,0% em 10% na validação.
+  - O baseline subiu de 0,0143 para 0,0220 de PR-AUC. Foi isso que encolheu a distância entre os dois.
+- **Todas as métricas de ordenação ficaram a favor do modelo, nenhuma com significância:**
+  - A captura no top 10% ficou 10,8 p.p. acima, com intervalo de −1,1 a +19,6 p.p.
+  - Sem peso, a PR-AUC foi de 0,0236 contra 0,0169 e a captura de 73,0% contra 59,8%.
+- **Calibração:** sem recalibrar, o score médio ficou em 0,320%, e a taxa observada foi 27% maior, de 0,406%. Isso acompanha a alta da prevalência de 0,30% no treino para 0,41% no teste. Nos dois decis de maior score, a taxa observada ficou 72% e 28% acima da prevista. O Brier ficou igual ao do baseline (0,00401 contra 0,00400) e abaixo do de uma taxa constante (0,00405).
+- **Segmentos com 30 ocasiões ou mais:**
+  - À noite, onde estão 286 das 315 ocasiões, a PR-AUC foi de 0,0284 contra 0,0236. O modelo pôs 75,5% das ocasiões da noite em `alta`, contra 66,1% do baseline.
+  - O modelo ficou à frente em Norte, Nordeste, Sudeste, região metropolitana, interior urbano, classes DE, C2 e C1, de 18 a 59 anos e nos dois sexos.
+  - O baseline ficou à frente em Sul, Centro-Oeste, capital, classe B2 e 10 a 17 anos.
+  - Os adolescentes de 10 a 17 anos foram o pior caso: a taxa observada foi 3,24 vezes a prevista (1,78 no treino), e só 44% das ocasiões deles ficaram em `alta`, contra 66% no baseline.
+- **Canal (local da pizza):** ficaram em `alta` 69,2% das ocasiões em casa (58,2% no baseline) e 75,6% das em estabelecimento (65,7%). Das ocasiões em outro lugar fora de casa, ficaram 57,6% (65,9%).
+- **Por mês:** o modelo teve a maior PR-AUC em março, maio e julho, e o baseline em abril e junho; a Copa do Mundo começou em 14 de junho. A taxa observada ficou de 0,97 a 1,88 vezes a prevista. O valor mais alto foi em julho, que tem só 32 ocasiões.
+- **Regressão Logística com dia da semana (exploratória, adendo de 20/11):**
+  - A PR-AUC foi de 0,0300 contra 0,0265, com diferença de +0,0034 (intervalo de −0,0012 a +0,0080).
+  - A captura foi de 66,0% contra 67,8%, e o erro médio da calibração por dia ficou em 22,2% contra 22,5%.
+  - Ela não substitui o modelo da aplicação.
+- **Erros:**
+  - Ficaram 26 ocasiões em `baixa`, 6,9% do peso das ocasiões. Delas, 94,5% estavam fora da noite, 62% de segunda a quinta, cerca de metade no Nordeste e cerca de metade em regiões metropolitanas.
+  - Dos contextos em `alta`, 97,3% do peso não teve a ocasião (falsos positivos).
+  - Comparados aos acertos em `alta`, os falsos positivos têm mais dias de semana (34% contra 25%) e mais classes A e B1 (15% contra 5%). O modelo valoriza demais a renda alta, como já se via na calibração do treino.
+- **SHAP:** a ordem dos fatores foi a mesma do treino: momento 1,03, escolaridade 0,56 e renda 0,34 (média do |log-odds|). O momento está entre os 3 fatores de todas as linhas.
+
+**Decisão:** a aplicação usa o modelo congelado, como fixado no protocolo, e não há nada a reajustar. O README não diz que ele é melhor que o baseline. O teste mostra que ele mantém o nível da validação e fica à frente em todas as métricas de ordenação, mas sem significância. Ele também diferencia pessoas no mesmo dia e período, o que o baseline não faz, e é isso que alimenta os fatores e o Decision Engine.
+
+A figura acima foi refeita numa segunda execução do notebook, só para corrigir o rótulo do eixo de precisão. A saída e as tabelas saíram idênticas às da primeira rodada.
 
 ## Decision Engine e API
 
@@ -224,7 +269,9 @@ O `top_factors` traz os 3 fatores que mais movem o score de cada contexto, calcu
 - **Fatores:** as colunas que vêm da mesma entrada formam 8 fatores: momento (período e fim de semana, com a interação), região, faixa de idade, sexo, escolaridade, moradores, renda e área.
 - **Leitura:** cada fator mostra a contribuição no log-odds do score calibrado e quanto ele multiplica a chance da ocasião em relação ao contexto médio do treino.
 - **Conferência:** os testes comparam o resultado com o valor de Shapley calculado pela definição e com a biblioteca `shap`.
-- **Importância no treino:** média do |log-odds| de 1,03 no momento, 0,56 na escolaridade e 0,36 na renda. Os outros fatores ficam abaixo de 0,2.
+- **Importância no treino:** média do |log-odds| de 1,03 no momento, 0,56 na escolaridade e 0,36 na renda. Os outros fatores ficam abaixo de 0,2. No teste, a ordem é a mesma.
+
+![SHAP global no teste: momento 1,03, escolaridade 0,56, renda 0,34, faixa de idade 0,17, área 0,09, região 0,08, sexo 0,06 e moradores 0,04](reports/figures/teste_2_shap_global.png)
 
 ### Decision Engine
 Regras documentadas transformam o score numa categoria de ativação, com justificativa ([docs/decision_engine.md](docs/decision_engine.md)). Não existe histórico de ações e resultados para treinar um segundo modelo, por isso as regras são explícitas e auditáveis.
@@ -280,22 +327,26 @@ O × 13,2 do momento compara com o contexto médio do treino, que mistura todos 
 
 ## Limitações
 
-- **Ganho instável no tempo:** na validação com origem móvel dentro do treino, o ganho sobre o baseline só foi significativo em uma das três janelas. Em dez–jan, a captura do modelo ficou abaixo da do baseline (Resultados, Robustez). É o teste que vai mostrar se o ganho se mantém.
+- **Ganho sobre o baseline sem significância:**
+  - Na validação com origem móvel dentro do treino, o ganho só foi significativo em uma das três janelas. Em dez–jan, a captura do modelo ficou abaixo da do baseline (Resultados, Robustez).
+  - No teste, todas as métricas de ordenação ficaram a favor do modelo, mas o intervalo da diferença de PR-AUC (−0,0029 a +0,0138) inclui zero. O baseline teve a maior PR-AUC em dois dos cinco meses.
+  - O ganho aparece sempre na mesma direção, mas não está demonstrado com 95% de confiança (Resultados, Avaliação no teste).
 - **Calibração por dia:** o modelo usa fim de semana (sexta a domingo), e não o dia da semana, porque o dia não trouxe ganho significativo de PR-AUC. Por isso, ele dá a mesma probabilidade para sexta e domingo e para segunda e quinta.
   - Na análise exploratória, porém, a noite de quinta (1,05%) se parece mais com a de sexta (1,15%) do que com as de segunda a quarta (0,50% a 0,66%).
   - Resultado: a quinta fica 34% abaixo do observado e a sexta, 52% acima.
+  - No teste, a quinta ficou 28% abaixo do observado, a segunda 38% e o sábado 39%. A Regressão Logística com dia da semana não reduziu o erro médio por dia (22,2% contra 22,5%).
 - **Calibração por segmento e no topo:** a sigmoide tem dois parâmetros e acerta o nível geral, não cada segmento ou faixa do ranking.
   - Ficam vieses acima de 30% em alguns públicos, como 10–17 anos (subestimados) e renda acima de 5 salários mínimos (superestimados).
+  - No teste, a taxa dos adolescentes de 10 a 17 anos foi 3,24 vezes a prevista, e só 44% das ocasiões deles ficaram em `alta`.
   - No 1% de maior score, a taxa fica superestimada.
   - Nesses casos, o score vale como ranking, mas não como probabilidade exata.
-- **Poucos positivos efetivos:** os 523 positivos do treino equivalem a 138 nas métricas ponderadas. Métricas de segmentos pequenos têm incerteza alta.
+- **Poucos positivos efetivos:** os 523 positivos do treino equivalem a 138 nas métricas ponderadas, e os 315 do teste a 118. Por isso os intervalos são largos, e as métricas de segmentos pequenos têm incerteza alta.
 - **Sazonalidade e eventos:** o mês fica fora do modelo, porque a coleta tem um único ano e o treino não cobre o outono.
   - No treino, janeiro teve taxa bem menor que os outros meses.
   - O período de teste tem a Copa do Mundo de 2018 e as festas juninas, e a taxa sobe de 0,30% para 0,41%.
+  - O score não é recalibrado, então no teste a taxa observada ficou 27% acima da prevista. Nos meses, a razão observada ÷ prevista foi de 0,97 a 1,88.
   - A POF não traz a data do recordatório, então os feriados não são identificáveis.
 - **Período de teste já lido:** uma triagem exploratória de 16/11 mediu no período de teste o desempenho de um modelo com as mesmas features. As decisões tiradas dali foram revertidas e o modelo final não depende do teste, mas o período não é inédito (Metodologia, adendo de 20/11).
-
-_A completar com a avaliação no teste._
 
 ## Como executar
 

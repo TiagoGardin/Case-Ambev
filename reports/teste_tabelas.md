@@ -1,0 +1,296 @@
+# Avaliação no teste
+
+Gerado por `notebooks/06_teste.py`. Métricas ponderadas por `peso_semana`; intervalos de 95% por bootstrap pareado de UPAs.
+
+## 1. Métricas no teste
+
+116.316 linhas, 315 ocasiões, taxa ponderada 0,406%. Cortes de `alta` fixados no treino: modelo final 0,7765%; baseline 1,1501% (P90 do baseline no treino).
+
+| métrica | modelo final | baseline |
+|---|---|---|
+| PR-AUC | 0,0265 | 0,0220 |
+| captura no top 5% | 39,6% | 34,3% |
+| captura no top 10% | 67,8% | 57,1% |
+| captura no top 20% | 89,2% | 78,5% |
+| ROC-AUC | 0,890 | 0,860 |
+| fração do peso em alta | 10,4% | 10,7% |
+| precisão em alta | 2,7% | 2,3% |
+| recall em alta | 68,6% | 60,0% |
+| F1 em alta | 5,2% | 4,4% |
+| Brier | 0,00401 | 0,00400 |
+| taxa prevista | 0,320% | 0,302% |
+| taxa observada | 0,406% | 0,406% |
+| PR-AUC ÷ prevalência | 6,5× | 5,4× |
+| referência da validação cruzada: PR-AUC agregada | 0,0276 | 0,0143 |
+| referência da validação cruzada: captura agregada no top 10% | 66,9% | 53,6% |
+
+## 2. Intervalos de 95% (bootstrap pareado de UPAs, 1.000 reamostragens)
+
+Modelo final melhor que o baseline pela regra do README (IC da diferença de PR-AUC acima de zero): **não**. Reamostragens com a diferença positiva: 89,8%.
+
+| modelo | PR-AUC | IC 95% PR-AUC | captura no top 10% | IC 95% captura |
+|---|---|---|---|---|
+| modelo final | 0,0265 | 0,0190 a 0,0384 | 67,8% | 55,9% a 77,0% |
+| baseline | 0,0220 | 0,0138 a 0,0344 | 57,1% | 47,0% a 65,8% |
+| LR com dia da semana | 0,0300 | 0,0220 a 0,0408 | 66,0% | 54,5% a 75,1% |
+| diferença final − baseline | +0,0045 | -0,0029 a +0,0138 | +10,8 p.p. | -1,1 p.p. a +19,6 p.p. |
+
+## 3. Classes do modelo final no teste
+
+| classe | % do peso | % do peso na validação | % das ocasiões | % das ocasiões na validação | ocasiões (linhas) | taxa observada | vezes a taxa do teste |
+|---|---|---|---|---|---|---|---|
+| alta | 10,4% | 10,0% | 68,6% | 67,0% | 208 | 2,69% | 6,6× |
+| media | 20,3% | 20,0% | 24,5% | 27,4% | 81 | 0,49% | 1,2× |
+| baixa | 69,3% | 70,0% | 6,9% | 5,6% | 26 | 0,04% | 0,1× |
+
+## 3b. Matriz de confusão no corte de alta: modelo final
+
+| previsto | observado | linhas | % do peso |
+|---|---|---|---|
+| alta | com ocasião | 208 | 0,28% |
+| alta | sem ocasião | 8.993 | 10,09% |
+| média ou baixa | com ocasião | 107 | 0,13% |
+| média ou baixa | sem ocasião | 107.008 | 89,50% |
+
+## 3b. Matriz de confusão no corte de alta: baseline
+
+| previsto | observado | linhas | % do peso |
+|---|---|---|---|
+| alta | com ocasião | 178 | 0,24% |
+| alta | sem ocasião | 9.539 | 10,47% |
+| média ou baixa | com ocasião | 137 | 0,16% |
+| média ou baixa | sem ocasião | 106.462 | 89,12% |
+
+## 4. Calibração geral
+
+| modelo | taxa prevista | taxa observada | observada ÷ prevista | Brier |
+|---|---|---|---|---|
+| modelo final | 0,320% | 0,406% | 1,27 | 0,004008 |
+| baseline | 0,302% | 0,406% | 1,34 | 0,003998 |
+| taxa constante do treino | 0,302% | 0,406% | 1,34 | 0,004047 |
+
+## 4b. Calibração por decil do score (modelo final)
+
+| decil do score | % do peso | ocasiões | taxa prevista | taxa observada | observada ÷ prevista |
+|---|---|---|---|---|---|
+| 1 | 10,0% | 2 | 0,008% | 0,009% | 1,15 |
+| 2 | 10,0% | 6 | 0,015% | 0,045% | 2,93 |
+| 3 | 10,0% | 3 | 0,025% | 0,017% | 0,68 |
+| 4 | 10,0% | 1 | 0,037% | 0,040% | 1,07 |
+| 5 | 10,0% | 3 | 0,052% | 0,065% | 1,24 |
+| 6 | 10,0% | 5 | 0,076% | 0,069% | 0,91 |
+| 7 | 10,0% | 6 | 0,117% | 0,035% | 0,30 |
+| 8 | 10,0% | 15 | 0,212% | 0,158% | 0,74 |
+| 9 | 10,0% | 71 | 0,505% | 0,870% | 1,72 |
+| 10 | 10,0% | 203 | 2,153% | 2,754% | 1,28 |
+
+## 5. Segmento: Período
+
+Níveis com menos de 30 ocasiões: só descritos (—).
+
+| Período | linhas | ocasiões | taxa observada | PR-AUC final | PR-AUC baseline | % em alta final | % em alta baseline | observada ÷ prevista (final) |
+|---|---|---|---|---|---|---|---|---|
+| Manhã | 29.079 | 6 | 0,05% | — | — | — | — | — |
+| Almoço | 29.079 | 9 | 0,05% | — | — | — | — | — |
+| Tarde | 29.079 | 14 | 0,04% | — | — | — | — | — |
+| Noite | 29.079 | 286 | 1,48% | 0,0284 | 0,0236 | 75,5% | 66,1% | 1,37 |
+
+## 5. Segmento: Região
+
+Níveis com menos de 30 ocasiões: só descritos (—).
+
+| Região | linhas | ocasiões | taxa observada | PR-AUC final | PR-AUC baseline | % em alta final | % em alta baseline | observada ÷ prevista (final) |
+|---|---|---|---|---|---|---|---|---|
+| Norte | 17.548 | 40 | 0,20% | 0,0098 | 0,0076 | 46,2% | 67,3% | 0,92 |
+| Nordeste | 41.176 | 106 | 0,35% | 0,0293 | 0,0175 | 58,7% | 56,2% | 1,47 |
+| Sudeste | 28.880 | 70 | 0,40% | 0,0230 | 0,0200 | 65,7% | 59,6% | 1,10 |
+| Sul | 14.652 | 59 | 0,58% | 0,0420 | 0,0445 | 80,4% | 61,6% | 1,55 |
+| Centro-Oeste | 14.060 | 40 | 0,55% | 0,0404 | 0,0570 | 88,5% | 63,7% | 1,43 |
+
+## 5. Segmento: Tipo de área
+
+Níveis com menos de 30 ocasiões: só descritos (—).
+
+| Tipo de área | linhas | ocasiões | taxa observada | PR-AUC final | PR-AUC baseline | % em alta final | % em alta baseline | observada ÷ prevista (final) |
+|---|---|---|---|---|---|---|---|---|
+| Capital | 23.124 | 105 | 0,58% | 0,0243 | 0,0330 | 70,5% | 57,7% | 1,15 |
+| Região metropolitana | 12.636 | 62 | 0,56% | 0,0487 | 0,0184 | 65,0% | 42,7% | 1,61 |
+| Interior urbano | 53.920 | 130 | 0,37% | 0,0324 | 0,0261 | 70,1% | 70,6% | 1,33 |
+| Rural | 26.636 | 18 | 0,04% | — | — | — | — | — |
+
+## 5. Segmento: Classe ABEP
+
+Níveis com menos de 30 ocasiões: só descritos (—).
+
+| Classe ABEP | linhas | ocasiões | taxa observada | PR-AUC final | PR-AUC baseline | % em alta final | % em alta baseline | observada ÷ prevista (final) |
+|---|---|---|---|---|---|---|---|---|
+| DE | 47.264 | 41 | 0,08% | 0,0063 | 0,0032 | 30,2% | 59,4% | 0,69 |
+| C2 | 28.944 | 68 | 0,38% | 0,0211 | 0,0105 | 46,6% | 37,8% | 1,76 |
+| C1 | 20.876 | 88 | 0,55% | 0,0639 | 0,0410 | 74,0% | 70,7% | 1,53 |
+| B2 | 14.376 | 97 | 0,93% | 0,0389 | 0,0611 | 82,4% | 65,8% | 1,72 |
+| B1 | 3.416 | 16 | 0,33% | — | — | — | — | — |
+| A | 1.440 | 5 | 0,12% | — | — | — | — | — |
+
+## 5. Segmento: Faixa de idade
+
+Níveis com menos de 30 ocasiões: só descritos (—).
+
+| Faixa de idade | linhas | ocasiões | taxa observada | PR-AUC final | PR-AUC baseline | % em alta final | % em alta baseline | observada ÷ prevista (final) |
+|---|---|---|---|---|---|---|---|---|
+| 10 a 17 anos | 16.704 | 56 | 0,56% | 0,0373 | 0,0399 | 44,2% | 65,9% | 3,24 |
+| 18 a 29 anos | 22.592 | 110 | 0,65% | 0,0397 | 0,0355 | 78,8% | 58,3% | 1,56 |
+| 30 a 44 anos | 29.304 | 85 | 0,38% | 0,0355 | 0,0169 | 72,1% | 55,8% | 0,93 |
+| 45 a 59 anos | 26.044 | 46 | 0,34% | 0,0231 | 0,0201 | 81,9% | 65,1% | 1,09 |
+| 60 anos ou mais | 21.672 | 18 | 0,13% | — | — | — | — | — |
+
+## 5. Segmento: Sexo
+
+Níveis com menos de 30 ocasiões: só descritos (—).
+
+| Sexo | linhas | ocasiões | taxa observada | PR-AUC final | PR-AUC baseline | % em alta final | % em alta baseline | observada ÷ prevista (final) |
+|---|---|---|---|---|---|---|---|---|
+| Feminino | 62.588 | 161 | 0,38% | 0,0230 | 0,0210 | 68,2% | 60,1% | 1,21 |
+| Masculino | 53.728 | 154 | 0,44% | 0,0318 | 0,0232 | 69,0% | 59,9% | 1,33 |
+
+## 5b. Canal: captura das ocasiões de cada local da pizza
+
+O local só existe quando há pizza, então o resultado por canal é a fração das ocasiões de cada local que fica em cada classe. `Casa` inclui delivery (a POF não separa).
+
+| local da pizza | ocasiões | % em alta final | % em alta ou média final | % em alta baseline |
+|---|---|---|---|---|
+| Casa | 214 | 69,2% | 92,5% | 58,2% |
+| Estabelecimento | 63 | 75,6% | 98,0% | 65,7% |
+| Outro lugar fora | 38 | 57,6% | 92,2% | 65,9% |
+
+## 6. Resultado por mês do teste
+
+Captura no top 10% do peso de cada mês. Meses com poucas ocasiões têm métricas instáveis.
+
+| mês | linhas | ocasiões | PR-AUC final | PR-AUC baseline | captura final | captura baseline | taxa prevista | taxa observada | observada ÷ prevista |
+|---|---|---|---|---|---|---|---|---|---|
+| mar/2018 | 25.584 | 84 | 0,0366 | 0,0238 | 56,1% | 50,3% | 0,318% | 0,525% | 1,65 |
+| abr/2018 | 27.136 | 65 | 0,0238 | 0,0329 | 74,5% | 69,0% | 0,333% | 0,324% | 0,97 |
+| mai/2018 | 30.392 | 66 | 0,0207 | 0,0130 | 68,3% | 39,4% | 0,301% | 0,370% | 1,23 |
+| jun/2018 | 25.860 | 68 | 0,0238 | 0,0288 | 69,9% | 71,5% | 0,342% | 0,379% | 1,11 |
+| jul/2018 | 7.344 | 32 | 0,1689 | 0,0329 | 82,9% | 68,0% | 0,285% | 0,536% | 1,88 |
+
+## 7. Comparação exploratória: dia da semana × fim de semana
+
+Diferença de PR-AUC (dia − final): +0,0034, IC 95% -0,0012 a +0,0080. Erro médio da calibração por dia: média de |prevista ÷ observada − 1| nos dias, a mesma medida do notebook 05 (21% no modelo final e 16% com dia da semana, no treino). Exploratório: não muda o modelo da aplicação.
+
+| modelo | PR-AUC | captura no top 10% | erro médio da calibração por dia |
+|---|---|---|---|
+| modelo final | 0,0265 | 67,8% | 22,5% |
+| LR com dia da semana | 0,0300 | 66,0% | 22,2% |
+
+## 7b. Calibração por dia da semana
+
+| dia | ocasiões | observada | prevista final | erro final | prevista dia | erro dia |
+|---|---|---|---|---|---|---|
+| Segunda-Feira | 34 | 0,317% | 0,197% | -38% | 0,201% | -37% |
+| Terca-Feira | 26 | 0,180% | 0,194% | +8% | 0,197% | +10% |
+| Quarta-Feira | 32 | 0,237% | 0,192% | -19% | 0,188% | -21% |
+| Quinta-Feira | 35 | 0,254% | 0,183% | -28% | 0,241% | -5% |
+| Sexta-Feira | 28 | 0,483% | 0,524% | +8% | 0,397% | -18% |
+| Sabado | 36 | 0,828% | 0,501% | -39% | 0,394% | -52% |
+| Domingo | 124 | 0,544% | 0,449% | -17% | 0,617% | +13% |
+
+## 8. Perfil dos erros: Período
+
+| Período | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| Manhã | 3,3% | 28,3% | 0,0% | 0,1% |
+| Almoço | 3,2% | 29,3% | 0,0% | 0,1% |
+| Tarde | 2,7% | 36,9% | 0,0% | 0,1% |
+| Noite | 90,8% | 5,5% | 100,0% | 99,7% |
+
+## 8. Perfil dos erros: Dia
+
+| Dia | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| Segunda a quinta | 34,8% | 62,1% | 25,1% | 34,2% |
+| Sexta a domingo | 65,2% | 37,9% | 74,9% | 65,8% |
+
+## 8. Perfil dos erros: Região
+
+| Região | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| Norte | 4,5% | 11,6% | 3,0% | 6,9% |
+| Nordeste | 22,7% | 51,9% | 19,4% | 19,8% |
+| Sudeste | 41,6% | 34,1% | 39,8% | 46,7% |
+| Sul | 21,3% | 0,6% | 25,0% | 18,0% |
+| Centro-Oeste | 9,9% | 1,8% | 12,8% | 8,7% |
+
+## 8. Perfil dos erros: Tipo de área
+
+| Tipo de área | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| Capital | 33,7% | 24,2% | 34,6% | 34,1% |
+| Região metropolitana | 20,9% | 50,4% | 19,8% | 16,9% |
+| Interior urbano | 44,0% | 17,9% | 44,9% | 45,3% |
+| Rural | 1,5% | 7,4% | 0,7% | 3,7% |
+
+## 8. Perfil dos erros: Classe ABEP
+
+| Classe ABEP | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| DE | 6,0% | 25,0% | 2,6% | 9,6% |
+| C2 | 23,3% | 51,7% | 15,8% | 18,9% |
+| C1 | 28,9% | 1,3% | 31,2% | 28,7% |
+| B2 | 37,7% | 20,1% | 45,3% | 28,2% |
+| B1 | 3,4% | 0,0% | 4,3% | 9,4% |
+| A | 0,7% | 2,0% | 0,8% | 5,2% |
+
+## 8. Perfil dos erros: Faixa de idade
+
+| Faixa de idade | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| 10 a 17 anos | 18,8% | 30,9% | 12,1% | 7,6% |
+| 18 a 29 anos | 32,8% | 28,6% | 37,7% | 28,9% |
+| 30 a 44 anos | 24,3% | 11,4% | 25,6% | 33,0% |
+| 45 a 59 anos | 18,5% | 6,6% | 22,0% | 20,9% |
+| 60 anos ou mais | 5,6% | 22,5% | 2,6% | 9,6% |
+
+## 8. Perfil dos erros: Sexo
+
+| Sexo | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) | alta sem ocasião (FP) |
+|---|---|---|---|---|
+| Feminino | 48,1% | 55,5% | 47,8% | 50,5% |
+| Masculino | 51,9% | 44,5% | 52,2% | 49,5% |
+
+## 8. Perfil dos erros: Local da pizza
+
+| Local da pizza | todas as ocasiões | ocasiões em baixa (FN) | alta com ocasião (VP) |
+|---|---|---|---|
+| Casa | 75,9% | 83,1% | 76,5% |
+| Estabelecimento | 12,5% | 3,6% | 13,7% |
+| Outro lugar fora | 11,7% | 13,3% | 9,8% |
+
+## 9. SHAP global (log-odds do score calibrado)
+
+| fator | |contribuição| média no teste | no treino | % das linhas com o fator no top 3 |
+|---|---|---|---|
+| momento (período e dia) | 1,030 | 1,030 | 100,0% |
+| escolaridade | 0,558 | 0,558 | 84,8% |
+| renda per capita | 0,344 | 0,356 | 65,6% |
+| faixa de idade | 0,169 | 0,170 | 38,4% |
+| área | 0,093 | 0,097 | 8,6% |
+| região | 0,077 | 0,076 | 2,3% |
+| sexo | 0,055 | 0,055 | 0,0% |
+| moradores no domicílio | 0,036 | 0,038 | 0,2% |
+
+## 9b. SHAP local: exemplos do teste
+
+- **Ocasião em alta com o maior score:** score 8,347% (alta). Contexto: {'periodo': 'noite', 'dia_semana': 'Sexta-Feira', 'UF': 'MT', 'urbano': 1, 'idade': 27, 'sexo': 'masculino', 'anos_estudo': 16, 'n_moradores': 2, 'renda_pc': 7569.44}. Fatores: momento (período e dia): noite de sexta a domingo (aumenta, chance × 13,16); escolaridade: 16 anos ou mais de estudo (aumenta, chance × 2,81); renda per capita: R$ 7.569 por pessoa ao mês (aumenta, chance × 2,47).
+
+- **Ocasião em baixa com o menor score:** score 0,009% (baixa). Contexto: {'periodo': 'almoco', 'dia_semana': 'Quinta-Feira', 'UF': 'PB', 'urbano': 0, 'idade': 13, 'sexo': 'feminino', 'anos_estudo': 6, 'n_moradores': 4, 'renda_pc': 296.5275}. Fatores: momento (período e dia): almoço de segunda a quinta (reduz, chance × 0,39); renda per capita: R$ 297 por pessoa ao mês (reduz, chance × 0,53); escolaridade: 6 anos de estudo (reduz, chance × 0,65).
+
+- **Alta sem ocasião com o maior score:** score 15,079% (alta). Contexto: {'periodo': 'noite', 'dia_semana': 'Sexta-Feira', 'UF': 'DF', 'urbano': 1, 'idade': 51, 'sexo': 'masculino', 'anos_estudo': 16, 'n_moradores': 2, 'renda_pc': 60234.58}. Fatores: momento (período e dia): noite de sexta a domingo (aumenta, chance × 13,16); renda per capita: R$ 60.235 por pessoa ao mês (aumenta, chance × 6,63); escolaridade: 16 anos ou mais de estudo (aumenta, chance × 2,81).
+
+## 10. Métricas sem peso (checagem)
+
+| modelo | PR-AUC sem peso | captura no top 10% sem peso | ROC-AUC sem peso |
+|---|---|---|---|
+| modelo final | 0,0236 | 73,0% | 0,899 |
+| baseline | 0,0169 | 59,8% | 0,865 |
+

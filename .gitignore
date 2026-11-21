@@ -17,4 +17,8 @@ models/*
 # O modelo final vai para o git: o commit registra o modelo congelado antes do teste
 !models/occasion_model.joblib
 !models/model_metadata.json
+# Derivados do modelo congelado, gerados só com o treino (SHAP por fator)
+!models/explicacao.json
+# Contexto observado do Decision Engine, gerado só com o treino
+!models/contexto_decisao.json
 mlruns/

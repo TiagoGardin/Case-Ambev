@@ -1,0 +1,97 @@
+{
+  "description": "Referência do SHAP por fator (src.models.explicar): média de cada coluna transformada da Regressão Logística",
+  "reference": "treino (jul/2017 a fev/2018). média ponderada por peso_semana. 223.748 linhas",
+  "created_at": "2026-11-21T02:47:37-03:00",
+  "model_file_sha256": "12a7f3f80b1228c3ad9700d405edec43035a9d1af99544ccd95626487633c2a2",
+  "factors": {
+    "momento": [
+      "periodo",
+      "periodo_fds",
+      "fim_de_semana"
+    ],
+    "regiao": [
+      "regiao"
+    ],
+    "idade": [
+      "faixa_idade"
+    ],
+    "sexo": [
+      "sexo"
+    ],
+    "escolaridade": [
+      "anos_estudo"
+    ],
+    "moradores": [
+      "n_moradores"
+    ],
+    "renda": [
+      "log_renda_pc"
+    ],
+    "area": [
+      "urbano"
+    ]
+  },
+  "columns": [
+    "cat__periodo_manha",
+    "cat__periodo_almoco",
+    "cat__periodo_tarde",
+    "cat__periodo_noite",
+    "cat__periodo_fds_seg-qui|manha",
+    "cat__periodo_fds_seg-qui|almoco",
+    "cat__periodo_fds_seg-qui|tarde",
+    "cat__periodo_fds_seg-qui|noite",
+    "cat__periodo_fds_sex-dom|manha",
+    "cat__periodo_fds_sex-dom|almoco",
+    "cat__periodo_fds_sex-dom|tarde",
+    "cat__periodo_fds_sex-dom|noite",
+    "cat__regiao_Norte",
+    "cat__regiao_Nordeste",
+    "cat__regiao_Sudeste",
+    "cat__regiao_Sul",
+    "cat__regiao_Centro-Oeste",
+    "cat__faixa_idade_10_17",
+    "cat__faixa_idade_18_29",
+    "cat__faixa_idade_30_44",
+    "cat__faixa_idade_45_59",
+    "cat__faixa_idade_60_mais",
+    "cat__sexo_feminino",
+    "cat__sexo_masculino",
+    "num__anos_estudo",
+    "num__n_moradores",
+    "num__log_renda_pc",
+    "bin__urbano",
+    "bin__fim_de_semana"
+  ],
+  "mean": [
+    0.24999999999999792,
+    0.24999999999999792,
+    0.24999999999999792,
+    0.24999999999999792,
+    0.14285714285714277,
+    0.14285714285714277,
+    0.14285714285714277,
+    0.14285714285714277,
+    0.10714285714285804,
+    0.10714285714285804,
+    0.10714285714285804,
+    0.10714285714285804,
+    0.08931822253926765,
+    0.26420535815332985,
+    0.43353305104750234,
+    0.1396198673484124,
+    0.07332350091149302,
+    0.14264854059852128,
+    0.20678415847224219,
+    0.25834638936095855,
+    0.21742778723190898,
+    0.17479312433636685,
+    0.524553019843279,
+    0.4754469801567309,
+    0.13191158979656098,
+    -0.026276217715379867,
+    0.1396167153460842,
+    0.8512793457655168,
+    0.4285714285714291
+  ],
+  "log_odds_reference": -7.204585576949059
+}

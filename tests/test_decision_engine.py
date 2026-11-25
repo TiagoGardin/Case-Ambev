@@ -66,10 +66,28 @@ def test_toda_combinacao_cai_numa_regra_documentada():
 
 def test_justificativa_traz_score_fatores_e_contexto():
     r = rec("alta", "delivery", score=0.0288)
-    assert "2,88%" in r.justificativa and "9,6 vezes" in r.justificativa
-    assert "noite de sexta a domingo" in r.justificativa and "× 3,40" in r.justificativa
-    assert "60% das ocasiões" in r.justificativa and "IC 95% de 50% a 70%" in r.justificativa
+    assert "2,88%" in r.justificativa and "9,6 vezes a chance média" in r.justificativa
+    assert "a prioridade é alta" in r.justificativa
+    assert "noite de sexta a domingo" in r.justificativa and "× 3,4)" in r.justificativa
+    assert "× 0,70)" in r.justificativa  # fator que reduz: duas casas
+    assert "60% das ocasiões" in r.justificativa
+    assert "faixa provável de 50% a 70%; no Brasil, 60%" in r.justificativa
     assert "inclui delivery" in r.justificativa
+
+
+@pytest.mark.parametrize("score, trecho", [(0.009, "3,0 vezes a chance média"),
+                                           (0.00006, "2% da chance média"),
+                                           (0.000001, "menos de 1% da chance média")])
+def test_justificativa_compara_com_a_chance_media(score, trecho):
+    assert trecho in rec("baixa", score=score).justificativa
+
+
+def test_justificativa_fala_a_lingua_de_quem_decide():
+    """Sem jargão de dados: quem lê é quem decide marketing ("classe" lembra classe social)."""
+    jargao = ("score", "classe", "ic 95", "treino", "pof", "log-odds", "shap", "modelo")
+    for classe, canal, associacao in product(CLASSES, (*CANAIS, None), (*ASSOCIACOES, None)):
+        texto = rec(classe, canal, associacao).justificativa.lower()
+        assert not any(p in texto for p in jargao), texto
 
 
 def test_justificativa_nao_afirma_efeito_causal():

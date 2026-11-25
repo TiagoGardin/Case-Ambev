@@ -1,0 +1,28 @@
+# Tema do app (app/app.py): verde, vermelho do fruto e dourado do Guaraná, sobre fundo creme.
+# As fontes vêm do Google Fonts; sem internet, o app usa a fonte sem serifa do sistema.
+
+[theme]
+base = "light"
+primaryColor = "#0E7A41"
+backgroundColor = "#FBF7EF"
+secondaryBackgroundColor = "#F1F5EF"
+textColor = "#1C2A21"
+linkColor = "#0E7A41"
+borderColor = "#E3E6DE"
+baseRadius = "0.8rem"
+buttonRadius = "2rem"
+baseFontSize = 15
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap, sans-serif"
+headingFont = "Poppins:https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap, sans-serif"
+greenColor = "#0E7A41"
+redColor = "#C8262C"
+yellowColor = "#F0B323"
+
+[client]
+toolbarMode = "minimal"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

@@ -6,6 +6,7 @@
 - GET /health: se os artefatos carregaram.
 - GET /model: metadados do modelo congelado.
 - GET /rules: categorias e regras do Decision Engine, na ordem em que são avaliadas.
+- GET /: redireciona para /docs, a documentação interativa.
 
 Rodar: `uvicorn src.api.main:app --reload` (documentação interativa em /docs).
 """
@@ -16,6 +17,7 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.api.servico import UFS, metadados_publicos, pontuar, recursos
@@ -23,6 +25,7 @@ from src.decision_engine.regras import CATEGORIAS, REGRAS
 from src.features.build_grid import DIAS, PERIODOS
 
 SIGLAS = tuple(sorted(UFS.values()))
+RENDA_MAXIMA = 250_000.0  # R$ de jan/2018; a maior renda per capita da POF é R$ 235.192
 
 
 class Contexto(BaseModel):
@@ -45,7 +48,12 @@ class Contexto(BaseModel):
     sexo: Literal["feminino", "masculino"]
     anos_estudo: int = Field(ge=0, le=16, description="16 = 16 ou mais")
     n_moradores: int = Field(ge=1, le=20)
-    renda_pc: float = Field(ge=0, description="Renda mensal per capita da família, em R$")
+    renda_pc: float = Field(
+        ge=0, le=RENDA_MAXIMA,
+        description="Renda mensal per capita da família, em R$ de janeiro de 2018 (a base de "
+                    "preços da POF; um valor de hoje precisa ser descontado da inflação). O "
+                    "limite fica logo acima do maior valor da POF (R$ 235 mil): além dele, o "
+                    "modelo extrapolaria")
     # Para o Decision Engine (não entram no modelo)
     canal: Literal["delivery", "varejo", "estabelecimento"] | None = Field(
         default=None, description="Canal da ativação, se já definido")
@@ -84,6 +92,12 @@ app = FastAPI(title="Occasion Intelligence: Pizza + Guaraná",
               description="Occasion Score da ocasião pizza com refrigerante (POF 2017-2018) e "
                           "recomendação de ativação por regras documentadas.",
               version="1.0.0", lifespan=ciclo)
+
+
+@app.get("/", include_in_schema=False)
+def raiz() -> RedirectResponse:
+    """A raiz leva à documentação interativa; sem isso, o navegador mostraria "Not Found"."""
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/health")

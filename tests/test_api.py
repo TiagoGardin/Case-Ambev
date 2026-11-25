@@ -39,6 +39,11 @@ def cliente():
         yield c
 
 
+def test_raiz_leva_a_documentacao(cliente):
+    r = cliente.get("/", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == "/docs"
+
+
 def test_health_e_modelo(cliente):
     saude = cliente.get("/health").json()
     assert saude["status"] == "ok" and len(saude["model_file_sha256"]) == 64
@@ -86,7 +91,8 @@ def test_todas_as_ufs_e_dias(cliente):
 
 @pytest.mark.parametrize("mudanca", [
     {"periodo": "madrugada"}, {"dia_semana": "Sábado"}, {"uf": "XX"}, {"idade": 9},
-    {"anos_estudo": 17}, {"n_moradores": 0}, {"renda_pc": -1}, {"canal": "tv"},
+    {"anos_estudo": 17}, {"n_moradores": 0}, {"renda_pc": -1}, {"renda_pc": 300_000},
+    {"canal": "tv"},
     {"associacao_marca": "alta"}, {"campo_extra": 1},
 ])
 def test_entrada_invalida_da_422(cliente, mudanca):

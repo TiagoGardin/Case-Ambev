@@ -300,6 +300,30 @@ def test_salvar_e_carregar_o_modelo(tmp_path):
         carregar(tmp_path)
 
 
+# Scores do modelo congelado em contextos fixos: o exemplo do README, os dois extremos
+# citados na saída do teste e um contexto de score quase nulo. O arquivo do modelo guarda
+# referências ao código de src/ (o preparo e as funções de feature), não o código em si.
+# Uma mudança nesse código mudaria as previsões sem mudar o hash do arquivo; este teste pega.
+SCORES_CONGELADOS = [
+    (linha(dia_semana="Domingo", renda_pc=4000.0), 0.02880324108288343),
+    (linha(UF="51", idade=27, sexo="masculino", anos_estudo=16, n_moradores=2,
+           renda_pc=7569.44), 0.08347372519727868),
+    (linha(periodo="almoco", dia_semana="Quinta-Feira", UF="25", urbano=0, idade=13,
+           anos_estudo=6, n_moradores=4, renda_pc=296.5275), 8.632783506516647e-05),
+    (linha(periodo="manha", dia_semana="Terca-Feira", UF="13", idade=70, sexo="masculino",
+           anos_estudo=0, n_moradores=7, renda_pc=0.0), 2.5507926328693376e-06),
+]
+
+
+@pytest.mark.skipif(not (MODELOS / "model_metadata.json").exists(),
+                    reason="modelo final não gerado")
+@pytest.mark.parametrize("contexto, esperado", SCORES_CONGELADOS)
+def test_modelo_congelado_mantem_os_scores_conhecidos(contexto, esperado):
+    modelo, _ = carregar(MODELOS)
+    obtido = modelo.predict_proba(pd.DataFrame([contexto]))[0, 1]
+    assert obtido == pytest.approx(esperado, rel=1e-9)
+
+
 @pytest.mark.skipif(not (MODELOS / "model_metadata.json").exists(),
                     reason="modelo final não treinado")
 def test_modelo_final_preve_e_classifica_uma_linha():

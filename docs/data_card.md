@@ -1,6 +1,6 @@
 # Data Card – Occasion Intelligence Pizza + Guaraná
 
-Seções exigidas pelo TAPI (Seção 4). As fontes ainda não integradas estão marcadas na seção 4.
+Seções exigidas pelo TAPI (Seção 4). As fontes não integradas nesta versão estão marcadas na seção 4.
 
 ## 1. Unidade de análise
 Pessoa × dia de recordatório × período do dia (manhã 5–10h, almoço 11–14h, tarde 15–17h, noite 18–4h).
@@ -60,15 +60,15 @@ Nenhuma escolha do modelo final usa o período de teste, mas ele não é inédit
 |---|---|
 | Dieta, IMC, insegurança alimentar | Dados sensíveis (seção 9) |
 | Refrigerante consumido no outro dia de recordatório | Só existe para o 2º dia (metade da base) e exigiria, na aplicação, conhecer o consumo individual de ontem, que o marketing não tem |
-| Clima mensal por UF | A POF não tem a data exata, e a média do mês se confunde com a UF. Chuva e feriado do dia entram no Decision Engine, não no modelo |
+| Clima mensal por UF | A POF não tem a data exata, e a média do mês se confunde com a UF. Chuva e feriado do dia seriam sinais para o Decision Engine, não para o modelo, mas não foram integrados (seção 4) |
 
 ## 4. Fontes e versões
 | Fonte | Papel | Versão / data de download | Granularidade | Chave de integração |
 |---|---|---|---|---|
 | POF 2017–2018 – microdados (IBGE) | Ground truth + features | Pacote de 13/07/2023, baixado em 16/11/2026 | Pessoa × item consumido; morador; UC; domicílio | Chaves da POF (abaixo) |
 | Critério Brasil – ABEP | Tabela de pontos e cortes da classe social | Versão válida a partir de 01/06/2019 | Domicílio | — |
-| Open-Meteo / BrasilAPI | Chuva e feriado do dia no Decision Engine (não entram no modelo) | Ainda não integrado | Município × dia | Município + data |
-| Vigitel 2006–2024, Censo 2022, OSM | Opcionais: contexto recente para o Mapa de Oportunidade | Ainda não usado | UF / capital | UF |
+| Open-Meteo / BrasilAPI | Ideia: chuva e feriado do dia no Decision Engine (não entrariam no modelo) | Não integrado nesta versão | Município × dia | Município + data |
+| Vigitel 2006–2024, Censo 2022, OSM | Opcionais: contexto recente para o Mapa de Oportunidade | Não usado nesta versão | UF / capital | UF |
 
 Registros da POF usados: Consumo Alimentar, Morador, Aluguel Estimado, Despesa Coletiva (quadro 10), Domicílio e Inventário.
 
@@ -87,7 +87,7 @@ Registros da POF usados: Consumo Alimentar, Morador, Aluguel Estimado, Despesa C
 - **Split temporal:** treino com entrevistas de jul/2017 a fev/2018 (223.748 linhas, 523 positivos); teste de mar/2018 a jul/2018 (116.316 linhas, 315 positivos). O lado do corte é decidido por domicílio, porque as UCs de um domicílio são entrevistadas na mesma visita e a família divide a pizza. Vale o mês da UC com a fonte mais confiável (aluguel estimado, depois aluguel pago, depois vizinhos) e, em empate, o mais cedo.
   - **Vizinhos dos dois lados do corte:** 1.044 das 5.404 UPAs têm domicílios no treino e no teste, porque são vizinhos entrevistados em meses diferentes.
   - Com partições por UPA em vez de domicílio, a PR-AUC da seleção quase não muda (0,0359 contra 0,0371 no modelo final).
-  - Os intervalos de confiança do teste reamostram UPAs ([notebooks/05_robustez.py](../notebooks/05_robustez.py), seção 4).
+  - Os intervalos de confiança do teste reamostram UPAs ([notebooks/06_teste.py](../notebooks/06_teste.py)). A contagem das UPAs dos dois lados e a partição por UPA estão no [notebooks/05_robustez.py](../notebooks/05_robustez.py), seção 4.
 - **Tipo de área:** `ESTRATO_POF` (registro Morador) mapeado pela tabela oficial "Estratos POF 2017-2018.xls" em capital, região metropolitana, interior urbano e rural. O "rural" coincide 100% com a situação do domicílio.
 - **Classe ABEP:** pontos do Critério Brasil por UC, somando bens do Inventário, banheiros, água e pavimentação do Domicílio e a instrução da pessoa de referência (Morador). A distribuição ponderada fica próxima da oficial:
 
@@ -95,7 +95,7 @@ Registros da POF usados: Consumo Alimentar, Morador, Aluguel Estimado, Despesa C
   |---|---|---|---|---|---|---|
   | POF (calculada) | 32,2% | 25,4% | 20,2% | 15,8% | 4,4% | 2,1% |
   | ABEP 2019 (oficial) | 28,3% | 26,8% | 21,5% | 16,5% | 4,4% | 2,5% |
-- **Renda:** `RENDA_TOTAL` da UC ÷ nº de moradores (`renda_pc`, feature); em 5 faixas de salário mínimo de 2018, R$ 954 (`faixa_renda`, alternativa). O denominador conta todos os moradores da UC, inclusive os 20 empregados domésticos, parentes deles e pensionistas que moram em 19 UCs da base.
+- **Renda:** `RENDA_TOTAL` da UC ÷ nº de moradores (`renda_pc`, feature); em 5 faixas de salário mínimo de 2018, R$ 954 (`faixa_renda`, alternativa). Os valores estão a preços de 15/01/2018, a referência da POF. A média mensal por família, ponderada pelo `PESO_FINAL` do registro Morador, dá R$ 5.426,70, o valor que o IBGE divulga, e a `RENDA_TOTAL` do Consumo Alimentar é a mesma do Morador nas 20.146 UCs. Por isso a API pede a renda em reais de janeiro de 2018. O denominador conta todos os moradores da UC, inclusive os 20 empregados domésticos, parentes deles e pensionistas que moram em 19 UCs da base.
 
 ## 6. Dicionário de variáveis
 Base `data/processed/grid.parquet` (gerada por `src/features/build_grid.py`): 340.072 linhas = 85.018 pessoa-dias × 4 períodos.
@@ -121,7 +121,7 @@ Base `data/processed/grid.parquet` (gerada por `src/features/build_grid.py`): 34
 | `anos_estudo` | Morador (ANOS_ESTUDO) | int | **Feature** | Anos de estudo (fundamental de 9 anos) |
 | `n_moradores` | Morador (contagem por UC) | int | **Feature** | Tamanho da unidade de consumo |
 | `abep_pontos`, `classe_abep` | Inventário + Domicílio + Morador | int / cat | Segmento | Pontos e classe do Critério Brasil (DE, C2, C1, B2, B1, A); também usada no Decision Engine |
-| `renda_pc` | Consumo (RENDA_TOTAL) ÷ n_moradores | float | **Feature** | Renda per capita da UC |
+| `renda_pc` | Consumo (RENDA_TOTAL) ÷ n_moradores | float | **Feature** | Renda mensal per capita da UC, em R$ de janeiro de 2018 |
 | `faixa_renda` | Derivada de `renda_pc` | cat | Alternativa (não entrou) | Faixa de renda per capita em salários mínimos de 2018 |
 | `urbano` | Consumo (TIPO_SITUACAO_REG) | 0/1 | **Feature** | Domicílio urbano (o rural coincide com o de `tipo_area`) |
 | `fim_de_semana` | Derivada de `dia_semana` | 0/1 | **Feature** (no lugar do dia da semana) | Sexta, sábado ou domingo; o modelo final usa também a interação com o período |

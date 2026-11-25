@@ -11,6 +11,8 @@ segundo modelo para escolher a ação. As regras combinam:
 
 A primeira regra de REGRAS que se aplica decide. As justificativas descrevem onde a
 ocasião costuma acontecer; nenhuma afirma que uma ação causa vendas (docs/decision_engine.md).
+Elas são escritas para quem decide marketing: "chance" e "prioridade" no lugar de score e
+classe ("classe alta" se confunde com classe social), "faixa provável" no lugar de IC 95%.
 """
 
 from __future__ import annotations
@@ -32,9 +34,9 @@ CATEGORIAS = {
     "ativacao_ponto_de_consumo":
         "Ativação no ponto de consumo: pizzarias, restaurantes e bares",
     "awareness_associacao":
-        "Awareness e construção de associação entre Guaraná e pizza",
+        "Awareness e associação: construir a associação entre Guaraná e pizza",
     "presenca_de_marca":
-        "Presença de marca de baixo custo (mídia contínua, material de ponto de venda), sem "
+        "Presença de marca: baixo custo (mídia contínua, material de ponto de venda), sem "
         "promoção dedicada",
     "sem_ativacao_dedicada":
         "Sem ativação dedicada: o contexto só entra em ações amplas",
@@ -66,21 +68,46 @@ def _num(v: float, casas: int = 1) -> str:
     return f"{v:.{casas}f}".replace(".", ",")
 
 
+def _score(v: float) -> str:
+    """Score em %, com casas suficientes para não virar 0,00% (ex.: 0,0061%)."""
+    return _pct(v, 2 if v >= 0.0001 else 4)
+
+
+def _comparado(v: float) -> str:
+    """O score dividido pela chance média: "9,6 vezes a chance média", "2% da chance média"."""
+    if v >= 1:
+        return f"{_num(v, 1)} vezes a chance média"
+    if v >= 0.01:
+        return f"{_pct(v)} da chance média"
+    return "menos de 1% da chance média"
+
+
 def _parcela(contexto: dict, regiao: str, medida: str) -> tuple[str, str]:
-    """("68%", "IC 95% de 47% a 87%; Brasil: 65%") para uma medida do contexto observado."""
+    """("68%", "faixa provável de 47% a 87%; no Brasil, 65%"): uma medida do contexto observado.
+
+    A faixa provável é o intervalo de 95% do contexto observado.
+    """
     r, br = contexto["regioes"][regiao][medida], contexto["brasil"][medida]
     lo, hi = r["ic95"]
     return (_pct(r["participacao"]),
-            f"IC 95% de {_pct(lo)} a {_pct(hi)}; Brasil: {_pct(br['participacao'])}")
+            f"faixa provável de {_pct(lo)} a {_pct(hi)}; no Brasil, {_pct(br['participacao'])}")
 
 
+ROTULO_CLASSE = {"alta": "alta", "media": "média", "baixa": "baixa"}
+VIA = {"delivery": "pelo delivery", "varejo": "pelo varejo",
+       "estabelecimento": "em pizzarias, bares e restaurantes"}
 EFEITO = {"aumenta": "aumenta a chance", "reduz": "reduz a chance", "neutro": "não muda a chance"}
+
+
+def _mult(m: float) -> str:
+    """Multiplicador da chance: 13,164 → "13,2"; 0,394 → "0,39"."""
+    return _num(m, 1 if m >= 1 else 2)
 
 
 def _fatores(top_fatores: list[dict]) -> str:
     partes = [f"{NOME_FATOR[f['factor']]}: {f['value']} ({EFEITO[f['effect']]}, "
-              f"× {_num(f['odds_multiplier'], 2)})" for f in top_fatores]
-    return "Principais fatores do score: " + "; ".join(partes) + "."
+              f"× {_mult(f['odds_multiplier'])})" for f in top_fatores]
+    return "O que mais pesa na chance: " + "; ".join(partes) + "."
 
 
 def validar(classe: str, regiao: str, contexto: dict, canal: str | None,
@@ -100,54 +127,55 @@ def recomendar(score: float, classe: str, top_fatores: list[dict], regiao: str, 
                associacao_marca: str | None = None) -> Recomendacao:
     """Categoria de ativação e justificativa para um contexto já pontuado pelo modelo."""
     validar(classe, regiao, contexto, canal, associacao_marca)
-    score_txt = (f"O score é {_pct(score, 2)}, {_num(score / taxa_referencia)} vezes a taxa "
-                 f"média do treino ({_pct(taxa_referencia, 2)}), na classe {classe}.")
+    score_txt = (f"A chance da ocasião é de {_score(score)}, "
+                 f"{_comparado(score / taxa_referencia)} ({_pct(taxa_referencia, 2)}), e a "
+                 f"prioridade é {ROTULO_CLASSE[classe]}.")
     fatores = _fatores(top_fatores)
     valor, detalhe = _parcela(contexto, regiao, "casa")
-    em_casa = (f"Na POF, {valor} das ocasiões de pizza com refrigerante da região {regiao} "
-               f"foram em casa, o que inclui delivery ({detalhe}).")
+    em_casa = (f"Na pesquisa do IBGE, {valor} das ocasiões de pizza com refrigerante no "
+               f"{regiao} foram em casa, o que inclui delivery ({detalhe}).")
 
     if classe == "baixa":
-        motivo = ("A chance da ocasião fica abaixo do corte da classe média, então o contexto "
-                  "não justifica investimento dedicado.")
+        motivo = ("A chance fica abaixo do nível da prioridade média, então o contexto não "
+                  "justifica investimento dedicado.")
         return Recomendacao("sem_ativacao_dedicada", f"{score_txt} {motivo} {fatores}", "R1")
 
     if associacao_marca == "baixa":
-        via = f", usando o canal {canal}" if canal else ""
+        via = f", {VIA[canal]}" if canal else ""
         valor, detalhe = _parcela(contexto, regiao, "guarana")
-        guarana = (f"Na POF, o guaraná (qualquer marca) esteve em {valor} das ocasiões de pizza "
-                   f"com refrigerante da região {regiao} ({detalhe}).")
-        motivo = (f"A associação atual à marca no segmento foi informada como baixa. Com chance "
-                  f"{'alta' if classe == 'alta' else 'moderada'} da ocasião, a prioridade é "
+        guarana = (f"Na pesquisa do IBGE, o guaraná (qualquer marca) esteve em {valor} das "
+                   f"ocasiões de pizza com refrigerante no {regiao} ({detalhe}).")
+        motivo = (f"Quem planeja a ação informou que este público associa pouco a marca a pizza. "
+                  f"Com chance {'alta' if classe == 'alta' else 'moderada'}, a prioridade é "
                   f"construir a associação entre Guaraná e pizza{via}.")
         return Recomendacao("awareness_associacao", f"{score_txt} {motivo} {guarana} {fatores}",
                             "R2")
 
     if classe == "alta" and canal == "delivery":
-        motivo = "Com chance alta e o canal delivery informado, a ativação é no delivery."
+        motivo = "Com chance alta e o delivery como canal escolhido, a ação é no delivery."
         return Recomendacao("ativacao_delivery", f"{score_txt} {motivo} {em_casa} {fatores}",
                             "R3")
 
     if classe == "alta" and canal == "estabelecimento":
         valor, detalhe = _parcela(contexto, regiao, "estabelecimento")
-        fora = (f"Na POF, {valor} das ocasiões de pizza com refrigerante da região {regiao} "
-                f"foram em estabelecimentos ({detalhe}).")
-        motivo = ("Com chance alta e o canal estabelecimento informado, a ativação é no ponto "
-                  "de consumo.")
+        fora = (f"Na pesquisa do IBGE, {valor} das ocasiões de pizza com refrigerante no "
+                f"{regiao} foram em restaurantes ou lanchonetes ({detalhe}).")
+        motivo = ("Com chance alta e pizzarias, bares e restaurantes como canal escolhido, a "
+                  "ação é no ponto de consumo.")
         return Recomendacao("ativacao_ponto_de_consumo", f"{score_txt} {motivo} {fora} {fatores}",
                             "R4")
 
     if classe == "alta":
         if canal == "varejo":
-            motivo = ("Com chance alta e o canal varejo informado, a ativação é um combo para "
+            motivo = ("Com chance alta e o varejo como canal escolhido, a ação é um combo para "
                       "consumo em casa.")
         else:
-            motivo = ("Com chance alta e sem canal informado, a recomendação segue o local mais "
-                      "comum da ocasião, que é a casa em todas as regiões.")
+            motivo = ("Com chance alta e sem canal escolhido, a recomendação segue o lugar onde a "
+                      "ocasião mais acontece, que é a casa em todas as regiões.")
         return Recomendacao("combo_consumo_em_casa", f"{score_txt} {motivo} {em_casa} {fatores}",
                             "R5")
 
-    via = f" no canal {canal}" if canal else ""
-    motivo = ("A chance é moderada: o contexto fica atrás dos de classe alta na prioridade e pede "
-              f"presença de marca de baixo custo{via}, sem promoção dedicada.")
+    via = f" {VIA[canal]}" if canal else ""
+    motivo = ("A chance é moderada: o contexto fica atrás dos de prioridade alta e pede presença "
+              f"de marca de baixo custo{via}, sem promoção dedicada.")
     return Recomendacao("presenca_de_marca", f"{score_txt} {motivo} {fatores}", "R6")

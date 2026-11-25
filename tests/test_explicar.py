@@ -143,7 +143,7 @@ def test_descrever_usa_o_que_o_modelo_enxerga():
     assert descrever("idade", p) == "18 a 29 anos"
     assert descrever("escolaridade", p) == "16 anos ou mais de estudo"
     assert descrever("moradores", p) == "1 morador"
-    assert descrever("renda", p) == "R$ 1.500 por pessoa ao mês"
+    assert descrever("renda", p) == "R$ 1.500 por pessoa ao mês, a preços de jan/2018"
     assert descrever("area", p) == "urbana"
 
 

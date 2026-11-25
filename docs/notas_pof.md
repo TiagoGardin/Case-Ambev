@@ -134,7 +134,7 @@ O lado do corte é decidido por domicílio (`split_temporal` em `src/features/bu
 **Por quê:**
 - `RENDA_DISP_PC` pode ser negativa (por causa das deduções), o que é difícil de interpretar.
 - Faixas de SM são legíveis para o negócio (aproximam "classe social").
-- Faixas também são uma entrada simples para a API, ao contrário de um valor em reais de 2018.
+- Faixas também seriam uma entrada simples para a API. Na versão final, a API recebe a renda per capita em reais de janeiro de 2018, a base de preços da POF, e o modelo usa o log dela (ver a atualização abaixo).
 
 **Limitação:** não é a classificação ABEP (Critério Brasil) usada pelo mercado. É apenas uma aproximação de classe.
 

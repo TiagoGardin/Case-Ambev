@@ -2,32 +2,42 @@
 
 Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião **Pizza + Refrigerante** por contexto (público, região, dia, período) e transforma o **Occasion Score** em uma recomendação de ativação para Guaraná Antarctica.
 
-> Status: em construção
+> **Entrega:** dados e Data Card, análise exploratória, modelo congelado e avaliado uma única vez no teste, Decision Engine, API e app. Vídeo de demonstração (até 5 min): _link a incluir_.
+
+![O app, feito para quem decide marketing: domingo à noite em São Paulo tem chance de 2,4%, cerca de 24 em cada 1.000 pessoas, com prioridade alta; a ação recomendada é a ativação via delivery, com o porquê, os fatores que mais pesam e o caminho da decisão aceso](reports/figures/app_simulador.png)
 
 ## Arquitetura
 
-```
-fontes (POF 2017-2018 do IBGE; Critério Brasil da ABEP)
-  → src/ingestion      (download e leitura dos microdados)
-  → src/features       (mês da entrevista, tipo de área, classe ABEP,
-                        grade pessoa × dia × período com target e features)
-  → src/models         (baseline, candidatos, avaliação, SHAP)
-  → src/decision_engine(regras documentadas)
-  → src/api            (FastAPI)
-  → app/               (Streamlit)
-```
+**Como o modelo foi construído e testado.** Todas as escolhas usam só o treino. O teste entra uma única vez, no fim, contra o baseline.
+
+![Fluxo do treino e do teste: a POF vira a grade pessoa × dia × período; o mês da entrevista separa treino e teste; seleção, calibração e cortes usam só o treino; o modelo é congelado num commit e avaliado uma única vez no teste](reports/figures/fluxo_1_treino_e_teste.svg)
+
+**O caminho de uma requisição.** O app chama a API, que aplica o mesmo preparo do treino e só usa artefatos congelados em `models/`. Canal e associação à marca não entram no modelo: vão direto para o Decision Engine.
+
+![Caminho de uma requisição: app, API com validação, preparo único, modelo congelado, SHAP e Decision Engine, até a resposta com os 6 campos do contrato](reports/figures/fluxo_2_requisicao.svg)
+
+| Etapa | Código |
+|---|---|
+| Download e leitura dos microdados | [src/ingestion](src/ingestion) |
+| Mês da entrevista, tipo de área, classe ABEP e a grade com alvo e features | [src/features](src/features) |
+| Preparo, modelos, validação, calibração, avaliação e SHAP | [src/models](src/models) |
+| Regras e contexto observado | [src/decision_engine](src/decision_engine) |
+| API (FastAPI + Pydantic) | [src/api](src/api) |
+| App (Streamlit) e fluxogramas | [app](app) |
 
 ## Estrutura do repositório
 
 | Pasta | Conteúdo |
 |---|---|
 | `data/raw` | Microdados originais (não versionados) |
-| `data/external` | Fontes de contexto externas (ainda não usadas) |
+| `data/external` | Reservada para fontes de contexto externas (não usadas nesta versão) |
 | `data/processed` | Bases tratadas (`.parquet`) |
 | `notebooks/` | EDA e experimentos |
-| `src/` | Código do pipeline |
+| `src/` | Código do pipeline, do Decision Engine e da API |
+| `app/` | App em Streamlit (só fala com o modelo pela API) e os fluxogramas; o tema fica em `.streamlit/config.toml` |
 | `models/` | Modelo final congelado antes do teste e seus metadados, a referência do SHAP e o contexto do Decision Engine (versionados) |
-| `reports/` | Gráficos para README e vídeo (`figures/`) e tabelas da análise exploratória |
+| `reports/` | Gráficos para README e vídeo (`figures/`), tabelas da análise exploratória e da avaliação no teste, e a saída da rodada do teste |
+| `audit/` | Auditoria dos modelos de 20/11: scripts, saídas e relatório |
 | `docs/` | Data Card, notas e regras do Decision Engine |
 | `tests/` | Testes (pytest) |
 
@@ -242,9 +252,9 @@ O teste tem 116.316 linhas e 315 ocasiões em 189 domicílios (118 ocasiões efe
 - **Calibração:** sem recalibrar, o score médio ficou em 0,320%, e a taxa observada foi 27% maior, de 0,406%. Isso acompanha a alta da prevalência de 0,30% no treino para 0,41% no teste. Nos dois decis de maior score, a taxa observada ficou 72% e 28% acima da prevista. O Brier ficou igual ao do baseline (0,00401 contra 0,00400) e abaixo do de uma taxa constante (0,00405).
 - **Segmentos com 30 ocasiões ou mais:**
   - À noite, onde estão 286 das 315 ocasiões, a PR-AUC foi de 0,0284 contra 0,0236. O modelo pôs 75,5% das ocasiões da noite em `alta`, contra 66,1% do baseline.
-  - O modelo ficou à frente em Norte, Nordeste, Sudeste, região metropolitana, interior urbano, classes DE, C2 e C1, de 18 a 59 anos e nos dois sexos.
-  - O baseline ficou à frente em Sul, Centro-Oeste, capital, classe B2 e 10 a 17 anos.
-  - Os adolescentes de 10 a 17 anos foram o pior caso: a taxa observada foi 3,24 vezes a prevista (1,78 no treino), e só 44% das ocasiões deles ficaram em `alta`, contra 66% no baseline.
+  - Dentro de cada segmento, a PR-AUC do modelo foi maior em Norte, Nordeste, Sudeste, região metropolitana, interior urbano, classes DE, C2 e C1, de 18 a 59 anos e nos dois sexos. A do baseline foi maior em Sul, Centro-Oeste, capital, classe B2 e 10 a 17 anos.
+  - Ordenar melhor dentro do segmento não garante mais ocasiões em `alta`, porque o corte de `alta` é um só para todos. Em três segmentos, o modelo pôs em `alta` menos ocasiões que o baseline: Norte (46% contra 67%), classe DE (30% contra 59%) e 10 a 17 anos (44% contra 66%). Renda e escolaridade, que pesam no score, são mais baixas nesses grupos.
+  - Os adolescentes de 10 a 17 anos foram o pior caso: a taxa observada foi 3,24 vezes a prevista (1,78 no treino).
 - **Canal (local da pizza):** ficaram em `alta` 69,2% das ocasiões em casa (58,2% no baseline) e 75,6% das em estabelecimento (65,7%). Das ocasiões em outro lugar fora de casa, ficaram 57,6% (65,9%).
 - **Por mês:** o modelo teve a maior PR-AUC em março, maio e julho, e o baseline em abril e junho; a Copa do Mundo começou em 14 de junho. A taxa observada ficou de 0,97 a 1,88 vezes a prevista. O valor mais alto foi em julho, que tem só 32 ocasiões.
 - **Regressão Logística com dia da semana (exploratória, adendo de 20/11):**
@@ -261,7 +271,7 @@ O teste tem 116.316 linhas e 315 ocasiões em 189 domicílios (118 ocasiões efe
 
 A figura acima foi refeita numa segunda execução do notebook, só para corrigir o rótulo do eixo de precisão. A saída e as tabelas saíram idênticas às da primeira rodada.
 
-## Decision Engine e API
+## Decision Engine, API e app
 
 ### Explicação de cada previsão (`top_factors`)
 O `top_factors` traz os 3 fatores que mais movem o score de cada contexto, calculados pelo SHAP exato da Regressão Logística ([src/models/explicar.py](src/models/explicar.py)).
@@ -281,7 +291,11 @@ Elas combinam três coisas:
 - o canal (delivery, varejo ou estabelecimento), informado por quem usa a API;
 - a associação atual à marca no segmento, também informada por quem usa a API.
 
-As justificativas citam os fatores do SHAP e o contexto observado na POF: onde a pizza foi comida e quantas ocasiões tiveram guaraná, por região e com intervalo. Nenhuma justificativa afirma efeito causal.
+As justificativas citam os fatores do SHAP e o contexto observado na POF: onde a pizza foi comida e quantas ocasiões tiveram guaraná, por região e com intervalo. Nenhuma justificativa afirma efeito causal. Elas são escritas para quem decide marketing: falam em chance e prioridade, e não em score e classe ("classe alta" se confunde com classe social), e o intervalo aparece como "faixa provável". Um teste confere que não há jargão de dados nelas.
+
+![Árvore de regras do Decision Engine: classe baixa leva a R1; associação à marca baixa leva a R2; classe média leva a R6; classe alta segue o canal: delivery R3, estabelecimento R4, varejo ou nenhum R5](reports/figures/fluxo_3_decision_engine.svg)
+
+A primeira regra que se aplica decide:
 
 | Regra | Quando se aplica | Categoria |
 |---|---|---|
@@ -304,12 +318,13 @@ A API foi feita em FastAPI, com validação em Pydantic ([src/api/main.py](src/a
 **Endpoints:**
 - `POST /predict` devolve os 6 campos do contrato.
 - `GET /health`, `GET /model` e `GET /rules` dão o estado do serviço, os metadados e as regras.
-- `/docs` traz a documentação interativa.
+- `/docs` traz a documentação interativa; a raiz (`http://localhost:8000/`) leva para lá.
 
 **Entrada:**
 - **Quando:** `periodo` e `dia_semana`.
 - **Onde:** `uf` e `urbano`.
 - **Quem:** `idade`, `sexo`, `anos_estudo`, `n_moradores` e `renda_pc`.
+- **Renda em reais de janeiro de 2018:** é a base de preços da POF. A média mensal por família nos microdados, R$ 5.426,70, é a que o IBGE divulga a preços de 15/01/2018. Uma renda de hoje precisa ser descontada da inflação; digitada sem desconto, ela infla o score. A API recusa valores acima de R$ 250 mil, logo acima do maior valor da POF (R$ 235 mil), porque ali o modelo extrapolaria. O app evita essa conta: pede a renda em faixas de salário mínimo (veja [App](#app)).
 - **Opcionais:** `canal` e `associacao_marca`, que vão para o Decision Engine, e `model_version`. Se a versão pedida não for a carregada, a API devolve 409.
 
 Exemplo de domingo à noite em SP, com canal delivery:
@@ -318,12 +333,34 @@ Exemplo de domingo à noite em SP, com canal delivery:
 |---|---|
 | `occasion_score` | 0,0288 (2,88%, 9,5 vezes a taxa média do treino) |
 | `classification` | `alta` |
-| `top_factors` | momento: noite de sexta a domingo (chance × 13,2); renda: R$ 4.000 por pessoa ao mês (× 1,8); escolaridade: 12 anos (× 1,6) |
+| `top_factors` | momento: noite de sexta a domingo (chance × 13,2); renda: R$ 4.000 por pessoa ao mês, a preços de jan/2018 (× 1,8); escolaridade: 12 anos (× 1,6) |
 | `recommendation_category` | `ativacao_delivery` (regra R3) |
-| `recommendation_reason` | Texto com o score, a regra, o contexto observado na região e os fatores |
+| `recommendation_reason` | Texto para quem decide marketing, com a chance, o motivo da regra, o contexto observado na região e os fatores |
 | `model_metadata` | Versão, data de treino, hash do arquivo, cortes das classes, regra aplicada e avisos de uso |
 
 O × 13,2 do momento compara com o contexto médio do treino, que mistura todos os períodos e dias.
+
+### App
+O app em Streamlit ([app/app.py](app/app.py)) é feito para quem decide marketing, sem jargão de dados. Ele só fala com o modelo pela API ([app/cliente.py](app/cliente.py)) e tem quatro abas:
+- **Simular uma ocasião:** o cenário (quando, onde, para quem, canal e associação à marca) vai para `POST /predict`. O app mostra:
+  - a chance da ocasião em três formas: porcentagem, frequência ("cerca de 24 em cada 1.000 pessoas") e prioridade;
+  - a ação recomendada, com o porquê;
+  - os 3 fatores que mais pesam;
+  - o caminho da decisão aceso na árvore.
+
+  Um quadro mostra quando (dia × período) e onde (região) a chance é maior para o mesmo público. Seis exemplos prontos cobrem as seis ações.
+- **Como funciona:** de onde vêm os dados, o que a chance quer dizer, a árvore de decisão em linguagem simples, as seis ações e o que a ferramenta não faz.
+- **Dá para confiar?:** o resultado do teste em palavras. A prioridade alta reuniu 69% das ocasiões em 10% dos momentos; a regra simples de dia e horário reuniu 60%. A aba explica por que a vantagem ainda pode ser acaso e lista os cuidados ao usar.
+- **Detalhes técnicos:** os fluxogramas desta página, as regras R1 a R6, as métricas do teste com intervalos, onde o modelo erra, as limitações e o JSON da última requisição e resposta.
+
+Nas três primeiras abas:
+- **Chance e prioridade** substituem score e classe ("classe alta" se confunde com classe social).
+- **Renda em faixas de salário mínimo:** são as mesmas faixas do projeto. O app envia à API o valor típico da faixa (a mediana do treino, em reais de jan/2018), o que dispensa corrigir a inflação.
+- **Escolaridade em níveis:** médio completo, por exemplo, equivale a 12 anos de estudo.
+
+Um teste confere que essas abas não usam jargão de dados e que os números delas batem com [reports/teste_tabelas.md](reports/teste_tabelas.md).
+
+O visual usa as cores do Guaraná (verde, vermelho do fruto e dourado), sem logotipos. As cores que codificam dados (prioridades e fatores) passaram por um validador de contraste e de daltonismo, e cada cor vem com rótulo escrito. Os fluxogramas são SVG desenhado à mão em [app/fluxogramas.py](app/fluxogramas.py), o mesmo código que gera as figuras deste README. A árvore de decisão tem duas versões com os mesmos caminhos: a técnica, com R1 a R6, e uma em linguagem simples.
 
 ## Limitações
 
@@ -334,7 +371,7 @@ O × 13,2 do momento compara com o contexto médio do treino, que mistura todos 
 - **Calibração por dia:** o modelo usa fim de semana (sexta a domingo), e não o dia da semana, porque o dia não trouxe ganho significativo de PR-AUC. Por isso, ele dá a mesma probabilidade para sexta e domingo e para segunda e quinta.
   - Na análise exploratória, porém, a noite de quinta (1,05%) se parece mais com a de sexta (1,15%) do que com as de segunda a quarta (0,50% a 0,66%).
   - Resultado: a quinta fica 34% abaixo do observado e a sexta, 52% acima.
-  - No teste, a quinta ficou 28% abaixo do observado, a segunda 38% e o sábado 39%. A Regressão Logística com dia da semana não reduziu o erro médio por dia (22,2% contra 22,5%).
+  - No teste, a quinta ficou 28% abaixo do observado, a segunda 38% e o sábado 39%. A Regressão Logística com dia da semana quase não reduziu o erro médio por dia (22,2% contra 22,5%).
 - **Calibração por segmento e no topo:** a sigmoide tem dois parâmetros e acerta o nível geral, não cada segmento ou faixa do ranking.
   - Ficam vieses acima de 30% em alguns públicos, como 10–17 anos (subestimados) e renda acima de 5 salários mínimos (superestimados).
   - No teste, a taxa dos adolescentes de 10 a 17 anos foi 3,24 vezes a prevista, e só 44% das ocasiões deles ficaram em `alta`.
@@ -378,6 +415,7 @@ O modelo, a referência do SHAP e o contexto do Decision Engine estão versionad
 ### Subir a API
 
 ```bash
+source .venv/bin/activate                # todo terminal novo precisa do ambiente ativado
 uvicorn src.api.main:app --reload        # documentação interativa em http://localhost:8000/docs
 ```
 
@@ -388,10 +426,21 @@ curl -X POST localhost:8000/predict -H 'Content-Type: application/json' -d '{
   "canal": "delivery"}'
 ```
 
+### Subir o app
+
+Com a API no ar, em outro terminal (o da API fica ocupado enquanto ela roda):
+
+```bash
+source .venv/bin/activate                # o ambiente vale só para o terminal onde foi ativado
+streamlit run app/app.py                 # o app fica em http://localhost:8501
+```
+
+O app procura a API em `http://localhost:8000`; para outro endereço, use `API_URL=http://... streamlit run app/app.py`. As fontes vêm do Google Fonts; sem internet, o app usa a fonte do sistema. Para refazer as figuras dos fluxogramas: `python app/fluxogramas.py`.
+
 ### Testes
 
 ```bash
 python -m pytest
 ```
 
-_Comandos do app a preencher._
+Os testes que dependem dos microdados ou dos artefatos de `models/` são pulados quando eles não existem.

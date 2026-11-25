@@ -113,7 +113,8 @@ def descrever(fator: str, p: pd.Series) -> str:
         n = int(round(p["n_moradores"]))
         return "1 morador" if n == 1 else f"{n} moradores"
     if fator == "renda":
-        return f"R$ {p['renda_pc']:,.0f} por pessoa ao mês".replace(",", ".")
+        valor = f"{p['renda_pc']:,.0f}".replace(",", ".")
+        return f"R$ {valor} por pessoa ao mês, a preços de jan/2018"
     if fator == "area":
         return "urbana" if p["urbano"] == 1 else "rural"
     raise ValueError(f"fator desconhecido: {fator!r}")

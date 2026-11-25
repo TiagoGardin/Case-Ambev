@@ -6,7 +6,7 @@ O Decision Engine transforma o Occasion Score numa categoria de ativação, semp
 
 Para aprender qual ação funciona em cada contexto, um modelo precisaria de um histórico de contexto → ação → resultado. A POF registra o que as pessoas comeram, mas não as ações de marketing nem o resultado delas. Sem esse histórico, um segundo modelo supervisionado não teria o que aprender. As regras, por outro lado, são explícitas, auditáveis e fáceis de mudar quando o negócio decidir outra coisa.
 
-O que as regras **não** fazem: não estimam efeito causal, venda incremental nem retorno de uma ação. O score diz onde a ocasião costuma acontecer. Ele não diz quanto uma ação vai vender. As justificativas seguem essa linha, e um teste confere que nenhuma delas promete resultado.
+O que as regras **não** fazem: não estimam efeito causal, venda incremental nem retorno de uma ação. O score diz onde a ocasião costuma acontecer. Ele não diz quanto uma ação vai vender. As justificativas seguem essa linha, e um teste confere que nenhuma delas promete resultado. Elas são escritas para quem decide marketing: falam em chance e prioridade, e não em score e classe ("classe alta" se confunde com classe social), e trazem o intervalo do contexto observado como "faixa provável".
 
 ## Entradas
 
@@ -74,7 +74,8 @@ Por isso a associação entra como informação de quem usa a API, que pode vir 
 
 ## Como mudar uma regra
 
-Altere `REGRAS`, `CATEGORIAS` e `recomendar` em [src/decision_engine/regras.py](../src/decision_engine/regras.py) e esta página. Os testes conferem três coisas:
+Altere `REGRAS`, `CATEGORIAS` e `recomendar` em [src/decision_engine/regras.py](../src/decision_engine/regras.py) e esta página. Os testes conferem quatro coisas:
 - toda combinação de classe, canal e associação cai numa regra documentada;
 - cada regra devolve a sua categoria;
-- nenhuma justificativa promete resultado de vendas.
+- nenhuma justificativa promete resultado de vendas;
+- nenhuma justificativa usa jargão de dados (score, classe, IC 95%, treino, POF, SHAP).

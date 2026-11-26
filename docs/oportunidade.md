@@ -106,10 +106,13 @@ O modelo usa a região, não a UF. Por isso, duas UFs da mesma região só difer
       nwr(area.uf)["amenity"~"^(restaurant|fast_food)$"]["cuisine"~"pizza",i];
       nwr(area.uf)["amenity"~"^(restaurant|fast_food)$"]["name"~"pizz",i];
     );
-    out ids;
+    out tags;
     ```
+
+    A primeira versão deste arquivo terminava a consulta com `out ids;`. A coleta usa `out tags;`, que devolve os mesmos elementos e acrescenta as etiquetas, para auditoria. A troca foi feita na coleta, antes de calcular qualquer chance ou ranking.
+  - **Código:** [src/oportunidade/coleta.py](../src/oportunidade/coleta.py). Ele reaplica a regra às etiquetas devolvidas e falha se algum elemento não a cumprir.
 - **Habitantes (Censo 2022, IBGE):** população residente por UF, com a tabela do SIDRA e a data da coleta registradas.
-- **Arquivos:** `data/external/osm_pizzarias_uf.csv` e `data/external/populacao_uf_censo2022.csv`.
+- **Arquivos:** `data/external/osm_pizzarias_uf.csv`, `data/external/osm_pizzarias_elementos.csv` (cada pizzaria, para auditoria) e `data/external/populacao_uf_censo2022.csv`. Os três vão para o git, porque o OpenStreetMap muda todo dia e uma nova coleta daria números diferentes. A descrição está em [data/external/README.md](../data/external/README.md).
 
 ### Regra do canal
 

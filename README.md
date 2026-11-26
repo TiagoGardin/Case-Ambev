@@ -30,7 +30,7 @@ Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião *
 | Pasta | Conteúdo |
 |---|---|
 | `data/raw` | Microdados originais (não versionados) |
-| `data/external` | Reservada para fontes de contexto externas (não usadas nesta versão) |
+| `data/external` | Dados externos do Mapa de Oportunidade: pizzarias do OpenStreetMap e população do Censo 2022 (versionados; veja [data/external/README.md](data/external/README.md)) |
 | `data/processed` | Bases tratadas (`.parquet`) |
 | `notebooks/` | EDA e experimentos |
 | `src/` | Código do pipeline, do Decision Engine e da API |

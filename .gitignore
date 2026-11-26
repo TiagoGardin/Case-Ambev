@@ -8,6 +8,11 @@ __pycache__/
 # Dados (microdados são grandes e baixados pelo pipeline)
 data/raw/*
 data/external/*
+# Retrato dos dados externos do Mapa de Oportunidade (o OpenStreetMap muda todo dia)
+!data/external/README.md
+!data/external/osm_pizzarias_uf.csv
+!data/external/osm_pizzarias_elementos.csv
+!data/external/populacao_uf_censo2022.csv
 data/processed/*
 !data/**/.gitkeep
 

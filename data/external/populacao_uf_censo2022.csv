@@ -1,0 +1,28 @@
+codigo_uf,uf,nome,populacao,fonte,data_coleta
+11,RO,Rondônia,1581196,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+12,AC,Acre,830018,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+13,AM,Amazonas,3941613,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+14,RR,Roraima,636707,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+15,PA,Pará,8120131,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+16,AP,Amapá,733759,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+17,TO,Tocantins,1511460,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+21,MA,Maranhão,6776699,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+22,PI,Piauí,3271199,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+23,CE,Ceará,8794957,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+24,RN,Rio Grande do Norte,3302729,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+25,PB,Paraíba,3974687,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+26,PE,Pernambuco,9058931,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+27,AL,Alagoas,3127683,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+28,SE,Sergipe,2210004,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+29,BA,Bahia,14141626,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+31,MG,Minas Gerais,20539989,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+32,ES,Espírito Santo,3833712,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+33,RJ,Rio de Janeiro,16055174,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+35,SP,São Paulo,44411238,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+41,PR,Paraná,11444380,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+42,SC,Santa Catarina,7610361,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+43,RS,Rio Grande do Sul,10882965,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+50,MS,Mato Grosso do Sul,2757013,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+51,MT,Mato Grosso,3658649,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+52,GO,Goiás,7056495,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26
+53,DF,Distrito Federal,2817381,"IBGE, Censo Demográfico 2022, SIDRA tabela 4709 (População residente), variável 93",2026-11-26

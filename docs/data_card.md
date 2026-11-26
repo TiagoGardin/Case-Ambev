@@ -68,7 +68,9 @@ Nenhuma escolha do modelo final usa o período de teste, mas ele não é inédit
 | POF 2017–2018 – microdados (IBGE) | Ground truth + features | Pacote de 13/07/2023, baixado em 16/11/2026 | Pessoa × item consumido; morador; UC; domicílio | Chaves da POF (abaixo) |
 | Critério Brasil – ABEP | Tabela de pontos e cortes da classe social | Versão válida a partir de 01/06/2019 | Domicílio | — |
 | Open-Meteo / BrasilAPI | Ideia: chuva e feriado do dia no Decision Engine (não entrariam no modelo) | Não integrado nesta versão | Município × dia | Município + data |
-| Vigitel 2006–2024, Censo 2022, OSM | Opcionais: contexto recente para o Mapa de Oportunidade | Não usado nesta versão | UF / capital | UF |
+| Censo 2022 (IBGE, SIDRA tabela 4709) | População por UF para o Mapa de Oportunidade ([docs/oportunidade.md](oportunidade.md)); não entra no modelo | Coletado em 26/11/2026 (UTC; noite de 25/11 em Brasília) | UF | Código IBGE da UF |
+| OpenStreetMap (API Overpass, licença ODbL) | Pizzarias por UF para o Mapa de Oportunidade; não entra no modelo | Base de 26/11/2026, 00h01 a 00h46 UTC (noite de 25/11 em Brasília) | Estabelecimento → UF | Sigla da UF |
+| Vigitel 2006–2024 | Opcional: contexto recente | Não usado nesta versão | UF / capital | UF |
 
 Registros da POF usados: Consumo Alimentar, Morador, Aluguel Estimado, Despesa Coletiva (quadro 10), Domicílio e Inventário.
 

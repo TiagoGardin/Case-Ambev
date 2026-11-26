@@ -26,4 +26,6 @@ models/*
 !models/explicacao.json
 # Contexto observado do Decision Engine, gerado só com o treino
 !models/contexto_decisao.json
+# Mapa de Oportunidade, gerado só com o treino e os dados externos versionados
+!models/oportunidade.json
 mlruns/

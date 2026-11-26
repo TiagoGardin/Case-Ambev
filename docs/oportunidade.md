@@ -167,6 +167,33 @@ Dois números só são reportados, sem mudar nada:
   - Mostra a atribuição "© colaboradores do OpenStreetMap", exigida pela licença ODbL.
 - **Testes:** `tests/test_oportunidade.py`, além do teste de jargão da aba.
 
+## Adendo de 25/11/2026: o que a verificação do ranking mostrou
+
+Nada na regra mudou: as definições acima são as mesmas da primeira versão. Este adendo registra o que a revisão do resultado encontrou. A regra foi seguida como escrita, mas há cinco pontos para ler os números com cuidado.
+
+**1. O modelo superestima a chance fora da noite.**
+- **Onde aparece:** de manhã, no almoço e à tarde, a chance média dos adultos fica de 1,5 a 8 vezes acima da taxa observada. Cada uma dessas combinações tem só 4 a 8 ocasiões observadas, então a comparação é imprecisa. À noite ela bate: 0,66% contra 0,72% de segunda a quinta, e 1,69% contra 1,73% de sexta a domingo.
+- **De onde vem:** é o mesmo achatamento do score descrito no README, em que a metade de baixo sai com 0,13% previsto contra 0,02% observado.
+- **O que não muda:** a ordem do topo. Fora da noite, 351 públicos-momento ficam em prioridade baixa e 9 em média, e o melhor deles é o 99º por volume.
+- **O que fica inflado:** a parcela das ocasiões fora da noite. É 15,6% estimada contra 5,4% observada.
+- **Consequência para o app:** a comparação de volume vale para a noite.
+
+**2. Entre adultos, a chance média fica 7% acima da observada.**
+- São 0,325% contra 0,304%, dentro do treino.
+- Somando todas as idades, as duas batem (0,302%). O ajuste geral do modelo não separa adultos de adolescentes.
+
+**3. Um dos números do relato não informa nada.**
+- **Públicos:** a correlação entre chance e taxa observada usa só 3 públicos-momento, porque só eles têm pelo menos 10 ocasiões observadas.
+- **Estados:** a correlação entre chance e pizzarias por habitante é 0,28.
+
+**4. Há empates na mediana e um caso sensível à cobertura do mapa.**
+- **Empates:** Pernambuco tem exatamente a chance mediana e o Amapá, exatamente a densidade mediana. Pela regra, igual à mediana conta como acima.
+- **Roraima** cai em delivery pela densidade de pizzarias (4,71 por 100 mil), que parece refletir o mapeamento no OpenStreetMap. Os pesos da POF também dão a Roraima 65% da parte que o Censo 2022 dá à UF, o que inclui o crescimento da população entre 2018 e 2022.
+
+**5. Os pesos da POF e o Censo 2022 concordam no resto.**
+- A participação de cada UF na população adulta do treino tem correlação de 0,9995 com a do Censo.
+- Fora Roraima, a razão entre as duas fica entre 0,82 e 1,07.
+
 ## Fora do escopo
 
 - Cidades, porque a POF não estima por cidade.

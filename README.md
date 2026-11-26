@@ -35,7 +35,7 @@ Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião *
 | `notebooks/` | EDA e experimentos |
 | `src/` | Código do pipeline, do Decision Engine e da API |
 | `app/` | App em Streamlit (só fala com o modelo pela API) e os fluxogramas; o tema fica em `.streamlit/config.toml` |
-| `models/` | Modelo final congelado antes do teste e seus metadados, a referência do SHAP e o contexto do Decision Engine (versionados) |
+| `models/` | Modelo final congelado antes do teste e seus metadados, a referência do SHAP, o contexto do Decision Engine e o Mapa de Oportunidade (versionados) |
 | `reports/` | Gráficos para README e vídeo (`figures/`), tabelas da análise exploratória e da avaliação no teste, e a saída da rodada do teste |
 | `audit/` | Auditoria dos modelos de 20/11: scripts, saídas e relatório |
 | `docs/` | Data Card, notas e regras do Decision Engine |

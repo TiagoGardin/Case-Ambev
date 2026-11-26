@@ -6,6 +6,8 @@
 - GET /health: se os artefatos carregaram.
 - GET /model: metadados do modelo congelado.
 - GET /rules: categorias e regras do Decision Engine, na ordem em que são avaliadas.
+- GET /oportunidade: o Mapa de Oportunidade (públicos-momento e estados), gerado só com o
+  treino e os dados externos versionados (docs/oportunidade.md).
 - GET /: redireciona para /docs, a documentação interativa.
 
 Rodar: `uvicorn src.api.main:app --reload` (documentação interativa em /docs).
@@ -20,7 +22,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.api.servico import UFS, metadados_publicos, pontuar, recursos
+from src.api.servico import UFS, metadados_publicos, oportunidade, pontuar, recursos
 from src.decision_engine.regras import CATEGORIAS, REGRAS
 from src.features.build_grid import DIAS, PERIODOS
 
@@ -117,6 +119,16 @@ def regras() -> dict:
     return {"categories": CATEGORIAS,
             "rules": [{"rule": r, "when": quando, "category": c} for r, quando, c in REGRAS],
             "order": "a primeira regra que se aplica decide"}
+
+
+@app.get("/oportunidade")
+def mapa_de_oportunidade() -> dict:
+    """Públicos-momento e estados priorizados pela regra de docs/oportunidade.md."""
+    try:
+        return oportunidade()
+    except FileNotFoundError as erro:
+        raise HTTPException(status_code=503, detail="models/oportunidade.json não foi gerado "
+                            "(python -m src.oportunidade.ranking)") from erro
 
 
 @app.post("/predict", response_model=Resposta)

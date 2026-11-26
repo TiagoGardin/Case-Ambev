@@ -276,6 +276,67 @@ def test_numeros_da_avaliacao_batem_com_o_relatorio_do_teste():
 
 
 # --------------------------------------------------------------------------
+# Onde e para quem ativar
+# --------------------------------------------------------------------------
+MAPA = MODELOS / "oportunidade.json"
+
+
+@pytest.fixture(scope="module")
+def mapa():
+    import json
+
+    return json.loads(MAPA.read_text(encoding="utf-8"))
+
+
+def test_textos_do_mapa_para_quem_decide():
+    p = {"sexo": "masculino", "faixa_etaria": "65+", "regiao": "Sul", "bloco": "seg_qui",
+         "periodo": "almoco"}
+    assert G.rotulo_publico(p) == ("Homens de 65 anos ou mais · Sul",
+                                   "Segunda a quinta, no almoço")
+    assert G.dias_texto(["Sexta-Feira", "Sabado", "Domingo"]) == "sexta, sábado e domingo"
+    assert G.horario_texto(["18:00-24:00", "00:00-05:00"]) == \
+        "das 18h à meia-noite e da meia-noite às 5h"
+    assert G.horario_texto(["11:00-15:00"]) == "das 11h às 15h"
+
+
+def test_rotulos_cobrem_o_mapa(mapa):
+    from src.oportunidade import ranking
+
+    assert set(C.FAIXAS_ETARIAS) == set(ranking.FAIXAS_ETARIAS)
+    assert set(C.BLOCOS) == set(ranking.BLOCOS.values())
+    assert {p["regra"] for p in mapa["publicos"]} <= set(C.ACAO_SEM_CANAL)
+    assert {e["categoria"] for e in mapa["estados"]} <= set(C.CANAIS_DOS_ESTADOS)
+    assert {p["renda_mais_comum"] for p in mapa["publicos"]} <= set(C.RENDAS)
+
+
+def test_volume_fora_da_noite_vem_do_mapa(mapa):
+    estimado, observado = G.fora_da_noite(mapa["publicos"])
+    # os números do adendo de docs/oportunidade.md
+    assert round(estimado, 3) == 0.156 and round(observado, 3) == 0.054
+
+
+def test_filtros_do_mapa(mapa):
+    todos = G.filtrar_publicos(mapa["publicos"], "Todas", "Todos")
+    assert len(todos) == sum(p["amostra_suficiente"] for p in mapa["publicos"])
+    assert G.filtrar_publicos(mapa["publicos"], None, None) == todos
+    norte_mulheres = G.filtrar_publicos(mapa["publicos"], "Norte", "Mulheres")
+    assert norte_mulheres and all(p["regiao"] == "Norte" and p["sexo"] == "feminino"
+                                  for p in norte_mulheres)
+    assert len(norte_mulheres) == 6 * 8  # 6 faixas etárias × 8 momentos
+
+
+def test_quadros_do_mapa(mapa):
+    pub = sorted(mapa["publicos"], key=lambda p: p["posicao_chance"])[:3]
+    html = G.ranking_publicos(pub, "chance", mapa["chance_media_adultos"])
+    assert html.count('class="item"') == 3 and "4,4%" in html and "prioridade alta" in html
+    assert "Nenhum público" in G.ranking_publicos([], "volume", 0.003)
+    cartao = G.cartao_anuncio(pub[0], mapa["chance_media_adultos"])
+    assert "DF, GO, MS e MT (Centro-Oeste)" in cartao and "Sexta, sábado e domingo" in cartao
+    estados = G.estados_por_canal(mapa["estados"])
+    assert estados.count('class="uf"') == 27  # cada estado em um único cartão
+
+
+# --------------------------------------------------------------------------
 # A página
 # --------------------------------------------------------------------------
 def _rodar_app(monkeypatch, requisitar):
@@ -296,18 +357,27 @@ def test_app_mostra_chance_acao_fatores_e_caminho(monkeypatch, api):
         return r.json()
 
     at, texto = _rodar_app(monkeypatch, pela_api)
-    assert len(at.tabs) == 4
+    assert len(at.tabs) == 5
     assert "2,4%" in texto and "prioridade alta" in texto  # o primeiro exemplo (R3)
     assert "Ativação via delivery" in texto and "Caminho aceso: Ação no delivery" in texto
     assert "× 13,2" in texto  # o momento, maior fator do exemplo
     assert texto.count("seu cenário") == 2  # um no quadro de quando, outro no de onde
-    # as três abas para quem decide marketing ficam sem jargão de dados
-    for aba in at.tabs[:3]:
+    # as quatro abas para quem decide marketing ficam sem jargão de dados
+    for aba in at.tabs[:4]:
         visivel = _texto_visivel(" ".join(m.value for m in aba.markdown))
         assert len(visivel) > 1000  # a aba foi lida de fato
         assert not JARGAO.search(visivel), JARGAO.search(visivel)
+    # o Mapa de Oportunidade: as duas listas, o anúncio, os canais, os cuidados e as fontes
+    onde = _texto_visivel(" ".join(m.value for m in at.tabs[1].markdown))
+    assert "Maior chance por pessoa" in onde and "Mais ocasiões no total" in onde
+    assert "Homens de 25 a 34 anos · Centro-Oeste" in onde  # 1º por chance
+    assert "Mulheres de 25 a 34 anos · Sudeste" in onde  # 1º por volume
+    assert "Parâmetros de anúncio" in onde and "Das 18h à meia-noite" in onde
+    assert "Delivery" in onde and "Combo para casa no varejo" in onde
+    assert "16% das ocasiões estimadas, contra 5% das observadas" in onde
+    assert "© colaboradores do OpenStreetMap" in onde
     # a aba técnica guarda os termos técnicos e a última simulação
-    tecnica = " ".join(m.value for m in at.tabs[3].markdown)
+    tecnica = " ".join(m.value for m in at.tabs[4].markdown)
     assert "PR-AUC" in tecnica and "Caminho aceso: regra R3" not in tecnica
     assert "regra R3" in tecnica
 

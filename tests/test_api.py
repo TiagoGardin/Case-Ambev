@@ -148,3 +148,15 @@ def test_fatores_somam_o_logit_do_score(cliente):
         float(logit(np.array([corpo["occasion_score"]]))[0]), abs=1e-8)
     for f in corpo["top_factors"]:
         assert f["log_odds"] == pytest.approx(contrib[f["factor"]], abs=1e-4)
+
+
+def test_mapa_de_oportunidade(cliente):
+    r = cliente.get("/oportunidade")
+    assert r.status_code == 200
+    mapa = r.json()
+    assert len(mapa["publicos"]) == 480 and len(mapa["estados"]) == 27
+    # o mapa é do mesmo modelo que a API carregou
+    assert mapa["modelo"]["model_file_sha256"] == cliente.get("/health").json()[
+        "model_file_sha256"]
+    assert {"chance", "parcela_das_ocasioes", "prioridade", "anuncio"} <= set(mapa["publicos"][0])
+    assert {"uf", "categoria", "pizzarias_100mil"} <= set(mapa["estados"][0])

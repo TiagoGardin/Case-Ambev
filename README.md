@@ -313,11 +313,12 @@ A associação à marca é informada, e não calculada, por dois motivos:
 A casa inclui delivery, porque a POF não os separa. A casa reúne 65% das ocasiões no Brasil e é o local mais comum em todas as regiões.
 
 ### API
-A API foi feita em FastAPI, com validação em Pydantic ([src/api/main.py](src/api/main.py)). Ao subir, ela carrega o modelo, a referência do SHAP e o contexto. Também confere o hash do modelo e se a referência do SHAP é desse mesmo modelo.
+A API foi feita em FastAPI, com validação em Pydantic ([src/api/main.py](src/api/main.py)). Ao subir, ela carrega o modelo, a referência do SHAP e o contexto. Também confere o hash do modelo e se a referência do SHAP é desse mesmo modelo. O Mapa de Oportunidade também é conferido contra o hash do modelo, na primeira vez que é pedido.
 
 **Endpoints:**
 - `POST /predict` devolve os 6 campos do contrato.
 - `GET /health`, `GET /model` e `GET /rules` dão o estado do serviço, os metadados e as regras.
+- `GET /oportunidade` devolve o Mapa de Oportunidade ([docs/oportunidade.md](docs/oportunidade.md)).
 - `/docs` traz a documentação interativa; a raiz (`http://localhost:8000/`) leva para lá.
 
 **Entrada:**
@@ -341,7 +342,7 @@ Exemplo de domingo à noite em SP, com canal delivery:
 O × 13,2 do momento compara com o contexto médio do treino, que mistura todos os períodos e dias.
 
 ### App
-O app em Streamlit ([app/app.py](app/app.py)) é feito para quem decide marketing, sem jargão de dados. Ele só fala com o modelo pela API ([app/cliente.py](app/cliente.py)) e tem quatro abas:
+O app em Streamlit ([app/app.py](app/app.py)) é feito para quem decide marketing, sem jargão de dados. Ele só fala com o modelo pela API ([app/cliente.py](app/cliente.py)) e tem cinco abas:
 - **Simular uma ocasião:** o cenário (quando, onde, para quem, canal e associação à marca) vai para `POST /predict`. O app mostra:
   - a chance da ocasião em três formas: porcentagem, frequência ("cerca de 24 em cada 1.000 pessoas") e prioridade;
   - a ação recomendada, com o porquê;
@@ -349,11 +350,16 @@ O app em Streamlit ([app/app.py](app/app.py)) é feito para quem decide marketin
   - o caminho da decisão aceso na árvore.
 
   Um quadro mostra quando (dia × período) e onde (região) a chance é maior para o mesmo público. Seis exemplos prontos cobrem as seis ações.
+- **Onde e para quem ativar:** o Mapa de Oportunidade, que vem de `GET /oportunidade`. O app mostra:
+  - duas listas de públicos de adultos (idade, sexo e região) em cada momento da semana: a de maior chance por pessoa e a de mais ocasiões no total, com filtro por região e sexo;
+  - os parâmetros de anúncio de um público: idade, gênero, estados, dias e horários;
+  - os estados agrupados por canal;
+  - os cuidados, em palavras simples.
 - **Como funciona:** de onde vêm os dados, o que a chance quer dizer, a árvore de decisão em linguagem simples, as seis ações e o que a ferramenta não faz.
 - **Dá para confiar?:** o resultado do teste em palavras. A prioridade alta reuniu 69% das ocasiões em 10% dos momentos; a regra simples de dia e horário reuniu 60%. A aba explica por que a vantagem ainda pode ser acaso e lista os cuidados ao usar.
 - **Detalhes técnicos:** os fluxogramas desta página, as regras R1 a R6, as métricas do teste com intervalos, onde o modelo erra, as limitações e o JSON da última requisição e resposta.
 
-Nas três primeiras abas:
+Nas quatro primeiras abas:
 - **Chance e prioridade** substituem score e classe ("classe alta" se confunde com classe social).
 - **Renda em faixas de salário mínimo:** são as mesmas faixas do projeto. O app envia à API o valor típico da faixa (a mediana do treino, em reais de jan/2018), o que dispensa corrigir a inflação.
 - **Escolaridade em níveis:** médio completo, por exemplo, equivale a 12 anos de estudo.

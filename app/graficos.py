@@ -1,4 +1,5 @@
-"""Gráficos do app: a prioridade, os fatores, o quadro de quando, o de onde e o termômetro.
+"""Gráficos do app: a prioridade, os fatores, os quadros de quando e onde, o Mapa de
+Oportunidade e o termômetro.
 
 Todos seguem as mesmas regras: marcas finas, rótulo direto em cada marca (a cor nunca é a
 única pista) e cores da paleta validada em estilo.py, com a mesma cor para a mesma
@@ -11,6 +12,7 @@ from __future__ import annotations
 import math
 from html import escape
 
+import conteudo as C
 import estilo as E
 
 # Escala do termômetro: de 0,001% a 30%, em log (o score vai de milionésimos a dezenas de %)
@@ -173,6 +175,137 @@ def onde(regioes: dict[str, tuple[float, str]], atual: str) -> str:
             f'{E.ROTULO_CLASSE[classe]}</div>'
             '</div>')
     return f'<div class="oi-onde">{"".join(linhas)}</div>'
+
+
+# --------------------------------------------------------------------------
+# Onde e para quem ativar (Mapa de Oportunidade)
+# --------------------------------------------------------------------------
+def rotulo_publico(p: dict) -> tuple[str, str]:
+    """("Homens de 25 a 34 anos · Centro-Oeste", "Sexta a domingo, à noite")."""
+    quem = f"{C.GENEROS[p['sexo']]} de {C.FAIXAS_ETARIAS[p['faixa_etaria']]} · {p['regiao']}"
+    return quem, f"{C.BLOCOS[p['bloco']]}, {C.NO_PERIODO[p['periodo']]}"
+
+
+def _decimal(v: float, casas: int = 1) -> str:
+    return f"{v:.{casas}f}".replace(".", ",")
+
+
+def _juntar(partes: list[str]) -> str:
+    return partes[0] if len(partes) == 1 else ", ".join(partes[:-1]) + " e " + partes[-1]
+
+
+def dias_texto(dias: list[str]) -> str:
+    """["Sexta-Feira", "Sabado", "Domingo"] → "sexta, sábado e domingo"."""
+    return _juntar([C.DIAS_EXTENSO[d].lower() for d in dias])
+
+
+def horario_texto(horarios: list[str]) -> str:
+    """["18:00-24:00", "00:00-05:00"] → "das 18h à meia-noite e da meia-noite às 5h"."""
+    def hora(h: str, inicio: bool) -> str:
+        n = int(h[:2])
+        if n in (0, 24):
+            return "da meia-noite" if inicio else "à meia-noite"
+        return f"das {n}h" if inicio else f"às {n}h"
+    return _juntar([f"{hora(a, True)} {hora(b, False)}"
+                    for a, b in (h.split("-") for h in horarios)])
+
+
+def fora_da_noite(publicos: list[dict]) -> tuple[float, float]:
+    """Parcela das ocasiões de manhã, no almoço e à tarde: (estimada, observada na pesquisa).
+
+    A observada sai do próprio mapa: taxa observada × parcela dos momentos de cada público.
+    """
+    estimada = sum(p["parcela_das_ocasioes"] for p in publicos if p["periodo"] != "noite")
+    obs = [(p["periodo"], p["taxa_observada"] * p["parcela_dos_momentos"]) for p in publicos]
+    total = sum(v for _, v in obs)
+    return estimada, sum(v for periodo, v in obs if periodo != "noite") / total
+
+
+def filtrar_publicos(publicos: list[dict], regiao: str | None, genero: str | None) -> list:
+    """Públicos com amostra suficiente, da região e do gênero escolhidos ("Todas"/"Todos" ou
+    None deixam passar todos)."""
+    sexo = {v: k for k, v in C.GENEROS.items()}.get(genero or "")
+    return [p for p in publicos if p["amostra_suficiente"]
+            and (regiao in (None, "Todas") or p["regiao"] == regiao)
+            and (sexo is None or p["sexo"] == sexo)]
+
+
+def ranking_publicos(itens: list[dict], medida: str, media: float) -> str:
+    """Lista numerada com barra. `medida`: "chance" (por pessoa) ou "volume" (do total)."""
+    chave = "chance" if medida == "chance" else "parcela_das_ocasioes"
+    topo = max((p[chave] for p in itens), default=0) or 1
+    linhas = []
+    for i, p in enumerate(itens, 1):
+        quem, momento = rotulo_publico(p)
+        if medida == "chance":
+            valor = pct_simples(p["chance"])
+            apoio = [comparado(p["chance"] / media).replace("chance média", "média")]
+        else:
+            valor = f"{_decimal(p['parcela_das_ocasioes'] * 100)}%"
+            apoio = ["das ocasiões", f"chance {pct_simples(p['chance'])}"]
+        largura = 100 * p[chave] / topo
+        linhas.append(
+            f'<div class="item"><div class="pos">{i}</div>'
+            f'<div class="quem"><b>{escape(quem)}</b><span>{escape(momento)} · '
+            f'prioridade {E.ROTULO_CLASSE[p["prioridade"]]}</span>'
+            f'<div class="trilho"><div class="barra" style="width:{largura:.1f}%;'
+            f'background:{E.CLASSE[p["prioridade"]]}"></div></div></div>'
+            f'<div class="valor"><b>{valor}</b>'
+            + "".join(f"<span>{escape(a)}</span>" for a in apoio) + "</div></div>")
+    if not linhas:
+        return '<div class="oi-nota">Nenhum público com esses filtros.</div>'
+    return f'<div class="oi-rank">{"".join(linhas)}</div>'
+
+
+def cartao_anuncio(p: dict, media: float) -> str:
+    """Os parâmetros de anúncio de um público-momento, em palavras simples."""
+    a = p["anuncio"]
+    quem, momento = rotulo_publico(p)
+    ufs = _juntar(a["localizacao_ufs"])
+    linhas = [
+        ("Idade", C.FAIXAS_ETARIAS[a["faixa_etaria"]]),
+        ("Gênero", C.GENEROS[a["genero"]]),
+        ("Onde", f"{ufs} ({p['regiao']})"),
+        ("Dias", dias_texto(a["dias"]).capitalize()),
+        ("Horário", horario_texto(a["horarios"]).capitalize()),
+        ("Renda mais comum", f"{C.RENDAS[p['renda_mais_comum']][0]} por pessoa na família"),
+    ]
+    tabela = "".join(f'<div class="par"><span>{escape(r)}</span><b>{escape(v)}</b></div>'
+                     for r, v in linhas)
+    acao = C.ACAO_SEM_CANAL[p["regra"]]
+    return (
+        f'<div class="oi-cartao oi-anuncio"><div class="oi-rotulo">Parâmetros de anúncio</div>'
+        f'<div class="titulo">{escape(quem)}</div><div class="oi-nota">{escape(momento)} · '
+        f'chance {pct_simples(p["chance"])}, '
+        f'{escape(comparado(p["chance"] / media).replace("chance média", "média dos adultos"))}'
+        f' · {E.classe_html(p["prioridade"], "prioridade ")}</div>'
+        f'<div class="pares">{tabela}</div>'
+        f'<div class="oi-legenda">Sem canal escolhido, o caminho da decisão sugere '
+        f'<b>{escape(acao)}</b>. Estes são parâmetros que as plataformas de anúncio aceitam; '
+        'não é um plano de mídia: orçamento, lances e resultado esperado ficam de fora.</div>'
+        '</div>')
+
+
+def estados_por_canal(estados: list[dict]) -> str:
+    """Os 27 estados em três cartões, um por canal, na ordem do mapa."""
+    cores = {"ativacao_delivery": E.VERDE, "combo_consumo_em_casa": E.DOURADO,
+             "presenca_de_marca": E.SUAVE}
+    cartoes = []
+    for categoria, (nome, regra) in C.CANAIS_DOS_ESTADOS.items():
+        grupo = [e for e in estados if e["categoria"] == categoria]
+        linhas = "".join(
+            f'<div class="uf"><b>{escape(e["uf"])}</b><span class="nome">{escape(e["nome"])}'
+            f'</span><span class="num">{_decimal(e["parcela_das_ocasioes"] * 100)}%</span>'
+            f'<span class="num">{_decimal(e["pizzarias_100mil"])}</span></div>' for e in grupo)
+        cartoes.append(
+            f'<div class="oi-cartao oi-canal" style="border-top:4px solid {cores[categoria]}">'
+            f'<div class="cab"><b>{escape(nome)}</b><span>{len(grupo)} estados</span></div>'
+            f'<div class="oi-nota">{escape(regra)}</div>'
+            '<div class="uf cabecalho"><b></b><span class="nome">Estado</span>'
+            '<span class="num">Ocasiões</span><span class="num">Pizzarias</span></div>'
+            f'{linhas}</div>')
+    return ('<div class="oi-grade r3" style="grid-template-columns:repeat(3,1fr)">'
+            + "".join(cartoes) + "</div>")
 
 
 # --------------------------------------------------------------------------

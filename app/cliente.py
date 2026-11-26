@@ -52,6 +52,11 @@ def regras() -> dict:
     return _requisitar("GET", "/rules")
 
 
+def oportunidade() -> dict:
+    """GET /oportunidade: o Mapa de Oportunidade (públicos-momento e estados)."""
+    return _requisitar("GET", "/oportunidade")
+
+
 def prever(contexto: dict) -> dict:
     """POST /predict com o contexto já no formato da API (os 6 campos voltam como dict)."""
     return _requisitar("POST", "/predict", contexto)

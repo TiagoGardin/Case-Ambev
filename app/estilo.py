@@ -235,6 +235,46 @@ header[data-testid="stHeader"] {{ background: transparent; }}
   border-color: #CFE6D8; }}
 .oi-status .chip code {{ color: var(--verde-escuro); }}
 
+/* Onde e para quem ativar */
+.oi-rank .item {{ display: grid; grid-template-columns: 30px 1fr 128px; gap: 12px;
+  align-items: center; padding: 11px 0; border-bottom: 1px solid #F0F2EC; }}
+.oi-rank .item:last-child {{ border-bottom: 0; }}
+.oi-rank .pos {{ width: 28px; height: 28px; border-radius: 50%; background: var(--verde-claro);
+  color: var(--verde-escuro); font: 700 13px/28px {FONTE_TITULO}; text-align: center; }}
+.oi-rank .quem b {{ display: block; font-size: 14px; color: var(--tinta); font-weight: 650; }}
+.oi-rank .quem span {{ display: block; font-size: 12px; color: var(--suave); margin-top: 2px; }}
+.oi-rank .trilho {{ height: 6px; background: #F1F3EF; border-radius: 0 3px 3px 0;
+  margin-top: 7px; }}
+.oi-rank .barra {{ height: 6px; border-radius: 0 3px 3px 0; }}
+.oi-rank .valor {{ text-align: right; }}
+.oi-rank .valor b {{ display: block; font: 800 19px/1.1 {FONTE_TITULO}; color: var(--tinta); }}
+.oi-rank .valor span {{ display: block; font-size: 11.5px; color: var(--suave);
+  margin-top: 2px; }}
+.oi-anuncio .titulo {{ font: 700 19px/1.25 {FONTE_TITULO}; color: var(--tinta);
+  margin-top: 6px; }}
+.oi-anuncio .oi-classe {{ padding: 2px 10px; font-size: 12px; }}
+.oi-anuncio .pares {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin-top: 14px; }}
+@media (max-width: 900px) {{ .oi-anuncio .pares {{ grid-template-columns: 1fr 1fr; }} }}
+.oi-anuncio .par {{ background: var(--verde-nevoa); border-radius: 12px; padding: 10px 12px; }}
+.oi-anuncio .par span {{ display: block; font-size: 11.5px; color: var(--suave);
+  text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }}
+.oi-anuncio .par b {{ display: block; font-size: 14px; color: var(--tinta); margin-top: 3px;
+  font-weight: 600; }}
+.oi-canal .cab {{ display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; }}
+.oi-canal .cab b {{ font: 700 16px/1.2 {FONTE_TITULO}; color: var(--tinta); }}
+.oi-canal .cab span {{ font-size: 12px; color: var(--suave); white-space: nowrap; }}
+.oi-canal .uf {{ display: grid; grid-template-columns: 30px 1fr 64px 76px; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid #F0F2EC; font-size: 13px; align-items: baseline; }}
+.oi-canal .uf:last-child {{ border-bottom: 0; }}
+.oi-canal .uf b {{ color: var(--tinta); }}
+.oi-canal .uf .nome {{ color: var(--tinta); }}
+.oi-canal .uf .num {{ text-align: right; color: var(--suave); font-variant-numeric: tabular-nums; }}
+.oi-canal .uf.cabecalho {{ font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--suave); margin-top: 10px; }}
+.oi-canal .uf.cabecalho .nome {{ color: var(--suave); }}
+
 /* Rodapé */
 .oi-rodape {{ margin-top: 34px; padding-top: 14px; border-top: 1px solid var(--borda);
   color: var(--suave); font-size: 12.5px; line-height: 1.6; }}

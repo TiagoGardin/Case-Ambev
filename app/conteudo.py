@@ -226,3 +226,50 @@ LIMITACOES = [
     "com a alta da prevalência (Copa do Mundo e festas juninas caíram no teste).",
     "As regras do Decision Engine são hipóteses de negócio: nenhuma afirma efeito causal.",
 ]
+
+# --------------------------------------------------------------------------
+# Onde e para quem ativar (Mapa de Oportunidade, docs/oportunidade.md)
+# --------------------------------------------------------------------------
+FAIXAS_ETARIAS = {"18-24": "18 a 24 anos", "25-34": "25 a 34 anos", "35-44": "35 a 44 anos",
+                  "45-54": "45 a 54 anos", "55-64": "55 a 64 anos", "65+": "65 anos ou mais"}
+GENEROS = {"feminino": "Mulheres", "masculino": "Homens"}
+BLOCOS = {"seg_qui": "Segunda a quinta", "sex_dom": "Sexta a domingo"}
+# Ação do caminho da decisão quando o canal ainda não foi escolhido (R1, R5, R6)
+ACAO_SEM_CANAL = {"R1": "sem ação dedicada", "R5": "combo para consumo em casa",
+                  "R6": "presença de marca de baixo custo"}
+# Canal de cada estado, com a regra em palavras simples (a ordem é a da regra)
+CANAIS_DOS_ESTADOS = {
+    "ativacao_delivery": ("Delivery", "Chance na metade de cima dos estados e muitas pizzarias "
+                                      "por habitante"),
+    "combo_consumo_em_casa": ("Combo para casa no varejo", "Chance na metade de cima, mas "
+                                                           "poucas pizzarias por habitante"),
+    "presenca_de_marca": ("Presença de marca de baixo custo", "Chance na metade de baixo dos "
+                                                              "estados"),
+}
+FONTES_DO_MAPA = ("Consumo: pesquisa do IBGE (POF 2017–2018), adultos de 18 anos ou mais. "
+                  "População: IBGE, Censo Demográfico 2022. Pizzarias: © colaboradores do "
+                  "OpenStreetMap, licença ODbL, mapa de novembro de 2026.")
+
+
+def cuidados_do_mapa(fora_estimado: str, fora_observado: str) -> list[str]:
+    """Os limites de docs/oportunidade.md em palavras simples; os números vêm do próprio mapa."""
+    return [
+        "<b>Mostra onde a ocasião costuma acontecer, não quanto uma ação vai vender.</b> Nenhuma "
+        "lista aqui é previsão de resultado de campanha.",
+        "<b>Use como orientação de prioridade.</b> No teste, a estimativa não pôde ser declarada "
+        "melhor que uma regra simples que só olha o dia e o horário; a ordem dos momentos vem "
+        "sobretudo da noite e do fim de semana, que essa regra também enxerga.",
+        f"<b>Fora da noite, a estimativa fica acima do que a pesquisa observou:</b> de manhã, no "
+        f"almoço e à tarde somam {fora_estimado} das ocasiões estimadas, contra "
+        f"{fora_observado} das observadas. Compare volumes principalmente entre momentos da "
+        "noite.",
+        "<b>O modelo enxerga regiões, não estados.</b> Dentro de uma mesma região, os estados só "
+        "diferem pelo perfil da população (idade, renda, escolaridade, tamanho da família).",
+        "<b>O mapa de pizzarias é colaborativo e tem cobertura desigual.</b> Poucas pizzarias "
+        "mapeadas podem ser falta de mapeamento: Roraima, por exemplo, aparece com mais "
+        "pizzarias por habitante que São Paulo. Aplicativos de entrega não entram na conta.",
+        "<b>As datas não coincidem:</b> o consumo é de 2017–2018, a população de 2022 e o mapa "
+        "de pizzarias de 2026.",
+        "<b>Só adultos.</b> Anúncios segmentados por idade começam aos 18 anos, e publicidade "
+        "para crianças e adolescentes tem restrições no Brasil.",
+    ]

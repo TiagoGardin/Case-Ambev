@@ -4,7 +4,8 @@ Artefatos, todos em models/:
 - o modelo congelado e os metadados (src.models.artefato confere o hash do modelo);
 - a referência do SHAP por fator (src.models.explicar confere que é do mesmo modelo);
 - o contexto observado do Decision Engine (src.decision_engine.contexto), que vem dos
-  dados do treino e não depende do modelo.
+  dados do treino e não depende do modelo;
+- o Mapa de Oportunidade (src.oportunidade.ranking), conferido contra o hash do modelo.
 
 `pontuar` faz o caminho inteiro de uma requisição: features → score calibrado →
 classe → os 3 fatores do SHAP → regra do Decision Engine. Devolve os 6 campos do
@@ -13,6 +14,7 @@ contrato da API.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -26,6 +28,7 @@ from src.models import artefato, explicar
 from src.models.preparo import FEATURES, UFS, preparar
 
 SIGLA_PARA_CODIGO = {sigla: codigo for codigo, sigla in UFS.items()}
+ARQUIVO_OPORTUNIDADE = "oportunidade.json"
 AVISOS = [
     "O score é a probabilidade calibrada de pizza com refrigerante no mesmo período, para "
     "uma pessoa num dia e período (POF 2017-2018).",
@@ -50,6 +53,15 @@ def recursos(pasta: str = str(artefato.PASTA)) -> Recursos:
     modelo, metadados = artefato.carregar(Path(pasta))
     return Recursos(modelo, metadados, explicar.carregar(modelo, metadados, Path(pasta)),
                     contexto_decisao.carregar(Path(pasta)))
+
+
+@lru_cache(maxsize=1)
+def oportunidade(pasta: str = str(artefato.PASTA)) -> dict:
+    """Mapa de Oportunidade (docs/oportunidade.md). Erro se não for do modelo carregado."""
+    mapa = json.loads((Path(pasta) / ARQUIVO_OPORTUNIDADE).read_text(encoding="utf-8"))
+    if mapa["modelo"]["model_file_sha256"] != recursos(pasta).metadados["model_file_sha256"]:
+        raise ValueError(f"{ARQUIVO_OPORTUNIDADE} não foi gerado com o modelo carregado")
+    return mapa
 
 
 def metadados_publicos(meta: dict) -> dict:

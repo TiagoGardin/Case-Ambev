@@ -3,8 +3,10 @@
 Simula um cenário (quando, onde, para quem, canal e associação à marca), chama a API e mostra
 a chance da ocasião, a prioridade, os 3 fatores que mais pesam e a ação recomendada, com o
 caminho da decisão aceso; mostra também quando e onde a chance é maior para o mesmo público.
-"Como funciona" e "Dá para confiar?" explicam o método sem jargão; "Detalhes técnicos" guarda
-os fluxogramas técnicos, as métricas do teste e o contrato da API.
+"Onde e para quem ativar" traz o Mapa de Oportunidade (docs/oportunidade.md): os públicos e
+momentos de maior chance e de maior volume, com os parâmetros de anúncio, e os estados por
+canal. "Como funciona" e "Dá para confiar?" explicam o método sem jargão; "Detalhes técnicos"
+guarda os fluxogramas técnicos, as métricas do teste e o contrato da API.
 
 O app só fala com o modelo pela API (app/cliente.py). Rodar cada comando em um terminal,
 os dois com o ambiente ativado (source .venv/bin/activate):
@@ -56,6 +58,11 @@ def lista(itens: list[str]) -> str:
 @st.cache_data(ttl=60, show_spinner=False)
 def metadados() -> tuple[dict, dict]:
     return cliente.modelo(), cliente.regras()
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def mapa() -> dict:
+    return cliente.oportunidade()
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -317,6 +324,84 @@ def aba_simular(modelo: dict | None, regras: dict | None) -> None:
 
 
 # --------------------------------------------------------------------------
+# Onde e para quem ativar
+# --------------------------------------------------------------------------
+TOPO_DAS_LISTAS = 8
+
+
+def aba_onde(modelo: dict | None) -> None:
+    bloco(E.secao("Onde e para quem ativar",
+                  "A mesma estimativa do simulador, agora para todos os públicos de adultos de "
+                  "uma vez: quem priorizar, em que momento, em quais estados e por qual canal."))
+    if modelo is None:
+        bloco(aviso_fora_do_ar())
+        return
+    try:
+        m = mapa()
+    except (cliente.ApiErro, cliente.ApiIndisponivel):
+        bloco('<div class="oi-aviso"><b>Não deu para carregar o mapa agora.</b> Recarregue a '
+              'página.</div>')
+        return
+    media = m["chance_media_adultos"]
+
+    bloco(E.secao("Para quem e quando anunciar",
+                  "Cada público junta idade, sexo e região, num momento da semana. Duas listas, "
+                  "porque são duas decisões: onde cada pessoa alcançada vale mais, e onde está o "
+                  f"maior volume. A chance média dos adultos é {G.pct_simples(media)}."))
+    f1, f2, _ = st.columns([1.9, 1.0, 0.9])
+    regiao = f1.segmented_control("Região", ["Todas", *C.REGIOES], default="Todas",
+                                  key="onde_regiao")
+    genero = f2.segmented_control("Sexo", ["Todos", *C.GENEROS.values()], default="Todos",
+                                  key="onde_sexo")
+    itens = G.filtrar_publicos(m["publicos"], regiao, genero)
+    por_chance = sorted(itens, key=lambda p: p["posicao_chance"])[:TOPO_DAS_LISTAS]
+    por_volume = sorted(itens, key=lambda p: p["posicao_parcela"])[:TOPO_DAS_LISTAS]
+    bloco(
+        '<div class="oi-grade r2">'
+        '<div class="oi-cartao"><div class="oi-rotulo">Maior chance por pessoa</div>'
+        f'{G.ranking_publicos(por_chance, "chance", media)}<div class="oi-legenda">Onde a '
+        'mensagem tem mais chance de encontrar a ocasião. Bom para ações caras por pessoa '
+        'alcançada.</div></div>'
+        '<div class="oi-cartao"><div class="oi-rotulo">Mais ocasiões no total</div>'
+        f'{G.ranking_publicos(por_volume, "volume", media)}<div class="oi-legenda">A parte de '
+        'todas as ocasiões de pizza com refrigerante dos adultos que acontece com esse público, '
+        'naquele momento. Bom para alcance.</div></div></div>')
+
+    escolhas = {}
+    for p in por_chance + por_volume:
+        quem, momento = G.rotulo_publico(p)
+        escolhas.setdefault(f"{quem} · {momento.lower()}", p)
+    if escolhas:
+        bloco(E.secao("Como anunciar para esse público",
+                      "Escolha um dos públicos das listas para ver os parâmetros de anúncio."))
+        nome = st.selectbox("Público", list(escolhas), key="onde_publico",
+                            label_visibility="collapsed")
+        bloco(G.cartao_anuncio(escolhas.get(nome, next(iter(escolhas.values()))), media))
+
+    bloco(E.secao("Em quais estados e por qual canal",
+                  "Cada estado é comparado com os outros em duas coisas: a chance média dos "
+                  "adultos dele e quantas pizzarias tem por 100 mil habitantes. Dentro de cada "
+                  "canal, os estados vêm em ordem de volume de ocasiões."))
+    bloco(G.estados_por_canal(m["estados"]))
+    bloco('<div class="oi-legenda">Ocasiões: a parte das ocasiões dos adultos do país que '
+          'acontece no estado. Pizzarias: quantas há por 100 mil habitantes.</div>')
+    with st.expander("Ver os 27 estados em ordem de prioridade", icon=":material/list:"):
+        st.dataframe([{
+            "Ordem": e["posicao"], "Estado": e["nome"], "Região": e["regiao"],
+            "Chance média dos adultos": G.pct_simples(e["chance"]),
+            "Parte das ocasiões do país": f"{e['parcela_das_ocasioes'] * 100:.1f}%".replace(
+                ".", ","),
+            "Pizzarias por 100 mil hab.": f"{e['pizzarias_100mil']:.1f}".replace(".", ","),
+            "Canal": C.CANAIS_DOS_ESTADOS[e["categoria"]][0],
+        } for e in m["estados"]], hide_index=True, width="stretch")
+
+    estimado, observado = G.fora_da_noite(m["publicos"])
+    bloco(E.secao("Antes de usar estes números") + lista(C.cuidados_do_mapa(
+        f"{estimado * 100:.0f}%", f"{observado * 100:.0f}%")))
+    bloco(f'<div class="oi-legenda">{escape(C.FONTES_DO_MAPA)}</div>')
+
+
+# --------------------------------------------------------------------------
 # Como funciona
 # --------------------------------------------------------------------------
 def cartoes_de_fatos(fatos: list[tuple[str, str, str]]) -> str:
@@ -508,18 +593,22 @@ def aba_tecnica(modelo: dict | None, regras: dict | None) -> None:
 # --------------------------------------------------------------------------
 saude, modelo, regras = estado_da_api()
 topo(modelo)
-ABAS = [":material/insights: Simular uma ocasião", ":material/menu_book: Como funciona",
-        ":material/verified: Dá para confiar?", ":material/code: Detalhes técnicos"]
-simular, como_funciona, confianca, tecnica = st.tabs(ABAS)
+ABAS = [":material/insights: Simular uma ocasião", ":material/map: Onde e para quem ativar",
+        ":material/menu_book: Como funciona", ":material/verified: Dá para confiar?",
+        ":material/code: Detalhes técnicos"]
+simular, onde, como_funciona, confianca, tecnica = st.tabs(ABAS)
 with simular:
     aba_simular(modelo, regras)
+with onde:
+    aba_onde(modelo)
 with como_funciona:
     aba_como_funciona(regras)
 with confianca:
     aba_confianca()
 with tecnica:
     aba_tecnica(modelo, regras)
-rodape = ("Projeto acadêmico do case Inteli × Ambev (TAPI). Dados: POF 2017–2018, IBGE. "
+rodape = ("Projeto acadêmico do case Inteli × Ambev (TAPI). Dados: POF 2017–2018 e Censo 2022, "
+          "IBGE; pizzarias: © colaboradores do OpenStreetMap. "
           "Não é um produto oficial da Ambev: as cores lembram o Guaraná, sem uso de marcas.")
 if modelo:
     rodape += (f" Modelo {escape(modelo['model_name'])} {escape(modelo['model_version'])}, "

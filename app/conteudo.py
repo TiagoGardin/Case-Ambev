@@ -162,6 +162,9 @@ CUIDADOS = [
     "porque renda e escolaridade puxam a chance deles para baixo.",
     "<b>Renda alta:</b> o modelo valoriza demais a renda alta. Entre os alarmes falsos, há três "
     "vezes mais pessoas das classes A e B1 do que entre os acertos (15% contra 5%).",
+    "<b>Manhã, almoço e tarde:</b> nesses períodos a chance estimada fica acima da real, "
+    "sobretudo de sexta a domingo. Eles ficam quase sempre em prioridade baixa; para comparar "
+    "momentos, a noite é a referência mais segura.",
 ]
 
 # --------------------------------------------------------------------------
@@ -222,6 +225,9 @@ LIMITACOES = [
     "delivery de comida feita em casa.",
     "A POF registra a categoria (refrigerante de guaraná), não a marca Guaraná Antarctica.",
     "Poucas ocasiões efetivas: 138 no treino e 118 no teste, por causa da variação dos pesos.",
+    "Fora da noite, o score fica acima do observado no treino (0,063% contra 0,023%): a "
+    "regularização forte deixa o efeito do fim de semana, que só existe à noite, passar para o "
+    "dia. São só 42 ocasiões de dia no treino (veja o README, Limitações).",
     "O score não é recalibrado: no teste, a taxa observada ficou 27% acima da prevista, junto "
     "com a alta da prevalência (Copa do Mundo e festas juninas caíram no teste).",
     "As regras do Decision Engine são hipóteses de negócio: nenhuma afirma efeito causal.",

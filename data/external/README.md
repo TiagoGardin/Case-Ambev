@@ -47,7 +47,7 @@ Resumo do retrato:
 | Pizzarias por 100 mil habitantes, por UF | de 0,48 (AC) a 7,63 (DF); mediana 2,73 |
 
 Duas observações sobre a regra:
-- **Cozinha:** 650 das pizzarias que entram só pela cozinha listam pizza junto com outras cozinhas, por exemplo `regional;pizza`. Elas entram, como a regra define.
+- **Cozinha:** 667 das pizzarias que entram só pela cozinha listam pizza junto com outras cozinhas: 650 com o separador `;` do OpenStreetMap, por exemplo `regional;pizza`, e 17 com vírgula, por exemplo `pizza,burger,sandwich`. Elas entram, como a regra define.
 - **Nome:** a regra pelo nome não pegou falsos positivos na conferência manual. Os casos menos óbvios são grafias como "Pizzarira" e "Pizzéria" e marcas como "PizzaJack".
 
 ## Cuidados

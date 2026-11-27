@@ -171,9 +171,18 @@ Dois números só são reportados, sem mudar nada:
 
 Nada na regra mudou: as definições acima são as mesmas da primeira versão. Este adendo registra o que a revisão do resultado encontrou. A regra foi seguida como escrita, mas há cinco pontos para ler os números com cuidado.
 
+**Correção de 26/11/2026, na verificação geral:**
+- No ponto 1, a primeira versão dizia que a superestimativa vinha do achatamento do score, com a metade de baixo em 0,13% previsto contra 0,02% observado. Esses números são do score antes da sigmoide. No modelo final, calibrado, a metade de baixo fica perto do observado (0,026% contra 0,020%). A explicação certa está no ponto 1.
+- A faixa "1,5 a 8 vezes" passou a ser "1,6 a 7,5 vezes", os valores medidos.
+- Os números e a regra não mudaram.
+
 **1. O modelo superestima a chance fora da noite.**
-- **Onde aparece:** de manhã, no almoço e à tarde, a chance média dos adultos fica de 1,5 a 8 vezes acima da taxa observada. Cada uma dessas combinações tem só 4 a 8 ocasiões observadas, então a comparação é imprecisa. À noite ela bate: 0,66% contra 0,72% de segunda a quinta, e 1,69% contra 1,73% de sexta a domingo.
-- **De onde vem:** é o mesmo achatamento do score descrito no README, em que a metade de baixo sai com 0,13% previsto contra 0,02% observado.
+- **Onde aparece:** de manhã, no almoço e à tarde, a chance média dos adultos fica de 1,6 a 7,5 vezes a taxa observada. Cada uma dessas combinações tem só 4 a 8 ocasiões observadas, então a comparação é imprecisa. À noite ela bate: 0,66% contra 0,72% de segunda a quinta, e 1,69% contra 1,73% de sexta a domingo.
+- **De onde vem:** provavelmente da regularização forte do modelo, que encolhe os coeficientes de período e da interação período × fim de semana. Os números abaixo são do treino, com todas as idades.
+  - **O fim de semana passa para o dia.** Na pesquisa, o salto do fim de semana só existe à noite. O modelo dá ao dia de sexta a domingo 1,9 vez a chance do dia de segunda a quinta (0,086% contra 0,045%), e na pesquisa a razão é de 0,7 (0,019% contra 0,027%).
+  - **Dia e noite ficam mais próximos.** De segunda a quinta, o modelo dá à noite 13,5 vezes a chance do dia; na pesquisa, são 27 vezes.
+  - **A sigmoide não desfaz isso.** Ela estica todos os scores por igual. Acerta o nível geral e a metade de baixo do score de dia (0,019% contra 0,021%), mas não a metade de cima (0,107% contra 0,026%).
+  - **A amostra do dia é pequena.** São só 42 ocasiões de dia no treino. No teste, a taxa observada de dia foi maior, de 0,04% a 0,05% ([reports/teste_tabelas.md](../reports/teste_tabelas.md)).
 - **O que não muda:** a ordem do topo. Fora da noite, 351 públicos-momento ficam em prioridade baixa e 9 em média, e o melhor deles é o 99º por volume.
 - **O que fica inflado:** a parcela das ocasiões fora da noite. É 15,6% estimada contra 5,4% observada.
 - **Consequência para o app:** a comparação de volume vale para a noite.

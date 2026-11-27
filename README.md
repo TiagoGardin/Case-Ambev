@@ -2,7 +2,7 @@
 
 Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião **Pizza + Refrigerante** por contexto (público, região, dia, período) e transforma o **Occasion Score** em uma recomendação de ativação para Guaraná Antarctica.
 
-> **Entrega:** dados e Data Card, análise exploratória, modelo congelado e avaliado uma única vez no teste, Decision Engine, API e app. Vídeo de demonstração (até 5 min): _link a incluir_.
+> **Entrega:** dados e Data Card, análise exploratória, modelo congelado e avaliado uma única vez no teste, Decision Engine, API e app. Diferencial: o [Mapa de Oportunidade](#diferencial-mapa-de-oportunidade), que diz para quem, quando e em quais estados ativar. Vídeo de demonstração (até 5 min): _link a incluir_.
 
 ![O app, feito para quem decide marketing: domingo à noite em São Paulo tem chance de 2,4%, cerca de 24 em cada 1.000 pessoas, com prioridade alta; a ação recomendada é a ativação via delivery, com o porquê, os fatores que mais pesam e o caminho da decisão aceso](reports/figures/app_simulador.png)
 
@@ -22,6 +22,7 @@ Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião *
 | Mês da entrevista, tipo de área, classe ABEP e a grade com alvo e features | [src/features](src/features) |
 | Preparo, modelos, validação, calibração, avaliação e SHAP | [src/models](src/models) |
 | Regras e contexto observado | [src/decision_engine](src/decision_engine) |
+| Mapa de Oportunidade: coleta dos dados externos e ranking | [src/oportunidade](src/oportunidade) |
 | API (FastAPI + Pydantic) | [src/api](src/api) |
 | App (Streamlit) e fluxogramas | [app](app) |
 
@@ -38,7 +39,7 @@ Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião *
 | `models/` | Modelo final congelado antes do teste e seus metadados, a referência do SHAP, o contexto do Decision Engine e o Mapa de Oportunidade (versionados) |
 | `reports/` | Gráficos para README e vídeo (`figures/`), tabelas da análise exploratória e da avaliação no teste, e a saída da rodada do teste |
 | `audit/` | Auditoria dos modelos de 20/11: scripts, saídas e relatório |
-| `docs/` | Data Card, notas e regras do Decision Engine |
+| `docs/` | Data Card, notas, regras do Decision Engine e regra do Mapa de Oportunidade |
 | `tests/` | Testes (pytest) |
 
 ## Dados
@@ -171,7 +172,10 @@ Tudo no treino, com as 50 partições e as regras da Metodologia ([notebooks/04_
 - **Por quê:** no scikit-learn, o mesmo C regulariza relativamente menos quando há mais linhas. Cada modelo da validação cruzada usou 4/5 do treino, e a sigmoide foi ajustada nas previsões deles.
 - **O efeito:** com o C da validação, o modelo final saía menos achatado, e o score calibrado ficava 16% acima da taxa do treino (0,351% contra 0,302%). Com C × 4/5, fica em 0,302%.
 - **Quando foi feito:** tudo isso foi detectado e corrigido só com o treino, antes do teste. A validação cruzada aninhada confirmou a correção fora da amostra: sem ela, o score calibrado sairia em 0,403% para uma taxa de 0,302%; com ela, sai em 0,302% ([notebooks/05_robustez.py](notebooks/05_robustez.py), seção 9).
-- **Reprodução:** um novo treino reproduz a sigmoide, os cortes e os scores exatamente, mas não o arquivo byte a byte. O SHA-256 dos metadados confere a integridade do arquivo, não a reprodução.
+- **Reprodução:** um novo treino reproduz a sigmoide, os cortes e os scores exatamente.
+  - **Rodada limpa de 26/11:** clone do GitHub, ambiente novo pelo `requirements.txt` e POF baixada de novo, com o pipeline inteiro menos o notebook do teste. O arquivo do modelo saiu idêntico byte a byte, com o mesmo SHA-256.
+  - **Outros artefatos:** o Mapa de Oportunidade, a grade e as tabelas e figuras da análise exploratória também saíram idênticos. Na referência do SHAP, no contexto do Decision Engine e nos metadados, só mudou a data de criação.
+  - **Em outra máquina ou com outras versões das bibliotecas,** o arquivo pode mudar. O SHA-256 dos metadados confere a integridade do arquivo carregado.
 
 O modelo, a sigmoide, os cortes e as métricas estão em [models/](models/).
 
@@ -350,7 +354,7 @@ O app em Streamlit ([app/app.py](app/app.py)) é feito para quem decide marketin
   - o caminho da decisão aceso na árvore.
 
   Um quadro mostra quando (dia × período) e onde (região) a chance é maior para o mesmo público. Seis exemplos prontos cobrem as seis ações.
-- **Onde e para quem ativar:** o Mapa de Oportunidade, que vem de `GET /oportunidade`. O app mostra:
+- **Onde e para quem ativar:** o [Mapa de Oportunidade](#diferencial-mapa-de-oportunidade), que vem de `GET /oportunidade`. O app mostra:
   - duas listas de públicos de adultos (idade, sexo e região) em cada momento da semana: a de maior chance por pessoa e a de mais ocasiões no total, com filtro por região e sexo;
   - os parâmetros de anúncio de um público: idade, gênero, estados, dias e horários;
   - os estados agrupados por canal;
@@ -368,6 +372,130 @@ Um teste confere que essas abas não usam jargão de dados e que os números del
 
 O visual usa as cores do Guaraná (verde, vermelho do fruto e dourado), sem logotipos. As cores que codificam dados (prioridades e fatores) passaram por um validador de contraste e de daltonismo, e cada cor vem com rótulo escrito. Os fluxogramas são SVG desenhado à mão em [app/fluxogramas.py](app/fluxogramas.py), o mesmo código que gera as figuras deste README. A árvore de decisão tem duas versões com os mesmos caminhos: a técnica, com R1 a R6, e uma em linguagem simples.
 
+## Diferencial: Mapa de Oportunidade
+
+O diferencial escolhido é o Mapa de Oportunidade da seção 9 do case. Ele cruza o Occasion Score com a densidade de pizzarias e o perfil da população para priorizar:
+- públicos e momentos: para quem e quando anunciar;
+- estados: onde e por qual canal.
+
+O case define o mapa como "uma regra documentada do Decision Engine aplicada ao território, e não uma nova previsão". A regra está em [docs/oportunidade.md](docs/oportunidade.md). Ela foi escrita e commitada antes da coleta dos dados externos e do cálculo de qualquer chance, e as definições não mudaram depois. O que a verificação encontrou foi registrado num adendo no fim do mesmo arquivo.
+
+![A aba "Onde e para quem ativar": duas listas de públicos, a de maior chance por pessoa (homens de 25 a 34 anos no Centro-Oeste, de sexta a domingo à noite, com 4,4%) e a de mais ocasiões no total (mulheres de 25 a 34 anos no Sudeste, com 3,5% das ocasiões); os parâmetros de anúncio do público escolhido; e os 27 estados agrupados em delivery, combo para casa no varejo e presença de marca](reports/figures/app_onde_ativar.png)
+
+**O que o mapa não toca:**
+- **O modelo:** nada é treinado. O script usa o modelo congelado e confere o hash do arquivo antes de rodar.
+- **O teste:** só entram linhas do treino de pessoas com 18 anos ou mais. São 190.536 linhas de 25.838 pessoas, com 426 ocasiões.
+- **As regras:** prioridade e categoria saem dos mesmos cortes e regras do Decision Engine.
+
+### Públicos e momentos
+
+Cada público-momento junta quatro dimensões:
+- faixa etária, nas faixas do Google Ads (18–24, 25–34, 35–44, 45–54, 55–64 e 65+);
+- sexo;
+- região, que é a resolução geográfica do modelo;
+- momento: período do dia × bloco de dias (segunda a quinta ou sexta a domingo).
+
+Isso dá 6 × 2 × 5 × 8 = 480 públicos-momento.
+
+Escolhas de recorte:
+- **Menores de 18 ficam de fora:** os anúncios segmentados por idade começam aos 18, e a publicidade para crianças e adolescentes tem restrições no Brasil.
+- **Renda e escolaridade não viram dimensões:** multiplicariam os públicos e deixariam amostras pequenas. A renda aparece como descrição: a faixa de salário mínimo mais comum no público.
+- **Amostra:** os 60 públicos (idade × sexo × região) têm de 170 a 1.008 pessoas no treino, acima do mínimo de 100 fixado na regra.
+
+Medidas, todas ponderadas por `peso_semana`:
+- **Chance:** a média do score calibrado no público-momento.
+- **Parcela das ocasiões:** a parte de todas as ocasiões estimadas dos adultos que cai no público-momento. Mostra onde está o volume.
+- **Prioridade:** os cortes do Decision Engine aplicados à chance. O resultado é 71 públicos-momento com prioridade alta, 58 com média e 351 com baixa.
+
+As duas ordens ficam lado a lado e não viram uma nota única. Escolher entre eficiência (chance por pessoa) e alcance (volume) é decisão de quem planeja a campanha.
+
+| | Maior chance por pessoa | Mais ocasiões no total |
+|---|---|---|
+| 1º | Homens de 25 a 34 anos, Centro-Oeste, sexta a domingo à noite: chance de 4,4%, 13,7 vezes a média dos adultos (0,33%) | Mulheres de 25 a 34 anos, Sudeste, sexta a domingo à noite: 3,5% das ocasiões, chance de 2,4% |
+| 2º | Homens de 25 a 34 anos, Sul: 2,8% | Homens de 25 a 34 anos, Sudeste: 3,4% das ocasiões |
+| 3º | Mulheres de 25 a 34 anos, Centro-Oeste: 2,7% | Mulheres de 35 a 44 anos, Sudeste: 3,2% das ocasiões |
+
+Os oito primeiros das duas listas são todos de sexta a domingo à noite. O momento vem do período e do bloco de dias, que a regra simples do baseline também enxerga. O que o modelo acrescenta é a ordem dos públicos dentro do momento. O Sudeste lidera em volume pelo tamanho da população; Centro-Oeste e Sul lideram em chance por pessoa.
+
+**Tradução para anúncio.** Cada público-momento vira os parâmetros que as plataformas de anúncio já aceitam:
+
+| Público-momento | Parâmetro de anúncio |
+|---|---|
+| Idade e sexo | Faixa etária e gênero |
+| Região | As UFs da região, como localização |
+| Momento | Programação de horário nos dias do bloco |
+
+A noite vai das 18h à meia-noite e da meia-noite às 5h, como na grade. São parâmetros, não um plano de mídia: orçamento, lances, veículos e previsão de resultado ficam de fora.
+
+### Estados e canal
+
+Cada UF tem duas medidas:
+- **Chance:** a média do score nos adultos da UF, em todos os momentos.
+- **Pizzarias por 100 mil habitantes:** a contagem do OpenStreetMap dividida pela população do Censo 2022.
+
+Cada medida é comparada com a mediana das 27 UFs: 0,28% de chance e 2,73 pizzarias por 100 mil habitantes. Igual à mediana conta como acima.
+
+| Chance | Pizzarias por habitante | Categoria | Estados |
+|---|---|---|---|
+| Acima | Acima | `ativacao_delivery` | SP, RJ, RS, PR, SC, DF, ES, AP e RR |
+| Acima | Abaixo | `combo_consumo_em_casa` | PE, GO, AM, MT e MS |
+| Abaixo | Qualquer | `presenca_de_marca` | Os outros 13 |
+
+Dentro de cada categoria, os estados vêm em ordem de parcela das ocasiões. A densidade de pizzarias não separa delivery de salão. A regra escolhe o delivery porque a casa, que inclui o delivery, reúne 65% das ocasiões (veja o [Decision Engine](#decision-engine)).
+
+### Dados externos
+
+Os arquivos estão versionados em [data/external](data/external/README.md), porque o OpenStreetMap muda todo dia e uma nova coleta daria números um pouco diferentes.
+
+| Dado | Fonte | Retrato |
+|---|---|---|
+| Pizzarias | OpenStreetMap, API Overpass: restaurantes e fast food com pizza na cozinha ou "pizz" no nome | 5.708 nas 27 UFs, coletadas em 26/11/2026, entre 00h01 e 00h46 UTC. Cada pizzaria está no arquivo, para auditoria |
+| População | IBGE, Censo 2022, SIDRA tabela 4709 | 203.080.756 habitantes |
+
+Os dados do OpenStreetMap são © colaboradores do OpenStreetMap, sob a licença ODbL. A atribuição aparece no app.
+
+### Como foi conferido
+
+- **Sete conferências no script:** o script falha se qualquer uma não passar.
+  - o hash do modelo;
+  - só treino e só adultos;
+  - as parcelas somam 100%;
+  - a média dos públicos reproduz a chance média dos adultos;
+  - as 27 UFs completas;
+  - a mesma saída em duas execuções;
+  - cada UF na categoria da regra.
+- **População:** bate, UF por UF, com uma segunda API do IBGE.
+- **Pizzarias:**
+  - o código reaplica a regra a cada elemento devolvido;
+  - a recontagem de três UFs deu o mesmo número;
+  - nenhuma pizzaria aparece em duas UFs;
+  - a conferência manual dos nomes não achou falsos positivos.
+- **Recálculo independente:** o mapa inteiro foi refeito com código separado do script, sem usar as funções dele. Os 480 públicos-momento e os 27 estados deram os mesmos valores, campo a campo.
+- **Testes:**
+  - a coesão dos dados e da regra está em [tests/test_oportunidade.py](tests/test_oportunidade.py);
+  - o endpoint e a aba do app têm testes próprios;
+  - o teste de jargão cobre a aba.
+
+### Limites
+
+Os mesmos limites aparecem no app, em palavras simples.
+- **Não mede efeito causal:** o mapa diz onde a ocasião costuma acontecer, não quanto uma ação vende.
+- **Orienta prioridade, sem garantir resultado:** no teste, o modelo não foi declarado melhor que o baseline ([Avaliação no teste](#avaliação-no-teste-1)).
+- **Fora da noite, a estimativa fica acima do observado:**
+  - De manhã, no almoço e à tarde, a chance fica de 1,6 a 7,5 vezes a taxa observada, com 4 a 8 ocasiões em cada combinação. A causa está em [Limitações](#limitações) (fora da noite).
+  - Fora da noite estão 15,6% das ocasiões estimadas e 5,4% das observadas.
+  - À noite, estimado e observado batem: 0,66% contra 0,72% de segunda a quinta, e 1,69% contra 1,73% de sexta a domingo.
+  - O topo não muda: fora da noite não há público-momento com prioridade alta, e o melhor deles é o 99º em volume. Comparações de volume valem entre momentos da noite.
+- **Scores do próprio treino:** a regularização forte limita o otimismo dessa reutilização, mas não o elimina. Entre adultos, a chance média estimada é de 0,325% e a observada, de 0,304%.
+- **Região, não estado:** o modelo usa a região. Duas UFs da mesma região só diferem pelo perfil da população.
+- **Cobertura desigual do OpenStreetMap:**
+  - Poucas pizzarias mapeadas pode ser falta de mapeamento. Goiás tem 1,22 por 100 mil habitantes e o Piauí, 4,28.
+  - Roraima cai em delivery pela densidade (4,71), que parece refletir o mapeamento.
+  - Aplicativos de entrega não entram na contagem.
+  - Entre as UFs, a correlação de Spearman entre chance e densidade é de 0,28.
+- **Datas diferentes:** o consumo é de 2017–18, a população de 2022 e as pizzarias de 2026.
+- **Pizza com refrigerante, não Guaraná:** é o mesmo alvo do modelo principal.
+
 ## Limitações
 
 - **Ganho sobre o baseline sem significância:**
@@ -383,6 +511,12 @@ O visual usa as cores do Guaraná (verde, vermelho do fruto e dourado), sem logo
   - No teste, a taxa dos adolescentes de 10 a 17 anos foi 3,24 vezes a prevista, e só 44% das ocasiões deles ficaram em `alta`.
   - No 1% de maior score, a taxa fica superestimada.
   - Nesses casos, o score vale como ranking, mas não como probabilidade exata.
+- **Fora da noite:** no treino, o score do dia fica acima da taxa observada: 0,063% contra 0,023%, com todas as idades.
+  - **Causa provável:** a regularização forte encolhe a interação período × fim de semana. Na pesquisa, o salto do fim de semana só existe à noite. O modelo dá ao dia de sexta a domingo 1,9 vez a chance do dia de segunda a quinta, e na pesquisa a razão é de 0,7.
+  - **Onde aparece:** a metade de baixo do score de dia bate com o observado (0,019% contra 0,021%). O excesso está na metade de cima: 0,107% contra 0,026%.
+  - **Efeito na prioridade:** fora da noite, 90% do peso fica em prioridade baixa, 10% em média e quase nada em alta. Parte dessa prioridade média, que leva à presença de marca (R6), pode vir da superestimativa.
+  - **Incerteza:** são só 42 ocasiões de dia no treino. No teste, a taxa observada de dia foi maior, de 0,04% a 0,05%.
+  - **Achado depois do teste:** a superestimativa apareceu na verificação do Mapa de Oportunidade, em 25/11, e a causa foi medida em 26/11, só no treino. Nada no modelo muda ([docs/oportunidade.md](docs/oportunidade.md), adendo).
 - **Poucos positivos efetivos:** os 523 positivos do treino equivalem a 138 nas métricas ponderadas, e os 315 do teste a 118. Por isso os intervalos são largos, e as métricas de segmentos pequenos têm incerteza alta.
 - **Sazonalidade e eventos:** o mês fica fora do modelo, porque a coleta tem um único ano e o treino não cobre o outono.
   - No treino, janeiro teve taxa bem menor que os outros meses.
@@ -414,9 +548,12 @@ python notebooks/05_robustez.py          # checagens de robustez do modelo escol
 python -m src.models.explicar            # referência do SHAP por fator → models/explicacao.json (só treino)
 python -m src.decision_engine.contexto   # contexto do Decision Engine → models/contexto_decisao.json (só treino)
 python notebooks/06_teste.py             # avaliação única no teste → reports/teste_tabelas.md
+python -m src.oportunidade.ranking       # Mapa de Oportunidade → models/oportunidade.json (só treino)
 ```
 
-O modelo, a referência do SHAP e o contexto do Decision Engine estão versionados em `models/`, então a API e o app rodam sem os microdados.
+O ranking lê os dados externos versionados em `data/external`. Para coletá-los de novo, use `python -m src.oportunidade.coleta`; o resultado vai diferir um pouco, porque o OpenStreetMap muda todo dia.
+
+O modelo, a referência do SHAP, o contexto do Decision Engine e o Mapa de Oportunidade estão versionados em `models/`, então a API e o app rodam sem os microdados.
 
 ### Subir a API
 

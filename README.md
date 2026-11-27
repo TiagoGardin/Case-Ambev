@@ -2,7 +2,7 @@
 
 Projeto do case Inteli Academy x Ambev (TAPI). Estima a propensão da ocasião **Pizza + Refrigerante** por contexto (público, região, dia, período) e transforma o **Occasion Score** em uma recomendação de ativação para Guaraná Antarctica.
 
-> **Entrega:** dados e Data Card, análise exploratória, modelo congelado e avaliado uma única vez no teste, Decision Engine, API e app. Diferencial: o [Mapa de Oportunidade](#diferencial-mapa-de-oportunidade), que diz para quem, quando e em quais estados ativar. Vídeo de demonstração (até 5 min): _link a incluir_.
+> **Entrega:** dados e Data Card, análise exploratória, modelo congelado e avaliado uma única vez no teste, Decision Engine, API e app. Diferencial: o [Mapa de Oportunidade](#diferencial-mapa-de-oportunidade), que diz para quem, quando e em quais estados ativar. Vídeo de demonstração (até 5 min): <https://youtu.be/TLOblUFbqn8>.
 
 ![O app, feito para quem decide marketing: domingo à noite em São Paulo tem chance de 2,4%, cerca de 24 em cada 1.000 pessoas, com prioridade alta; a ação recomendada é a ativação via delivery, com o porquê, os fatores que mais pesam e o caminho da decisão aceso](reports/figures/app_simulador.png)
 
